@@ -1,0 +1,4 @@
+numpy
+six
+tensorflow
+horovod
