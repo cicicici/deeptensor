@@ -99,3 +99,18 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# PyCharm project
+.idea
+*.swp
+
+# Visual Studio Code
+.vscode
+
+# local files
+mnt
+_asset
+_train
+_keras
+_sniffer
+
