@@ -326,31 +326,32 @@ def build_chief_train_hooks(opt):
         cur_ep = int(cur_step // opt_.data.ep_size)
 
         metric_info = ''
-        for i, m in enumerate(opt_.valid_metric):
-            if m.cnt <= 0:
-                continue
-            m_vals = [0 for op in m.ops]
-            m_names = [dt.tensor_short_name(op) for op in m.ops]
+        if opt.validate_ep > 0 and cur_ep % opt.validate_ep == 0:
+            for i, m in enumerate(opt_.valid_metric):
+                if m.cnt <= 0:
+                    continue
+                m_vals = [0 for op in m.ops]
+                m_names = [dt.tensor_short_name(op) for op in m.ops]
 
-            for j in range(0, m.cnt):
-                vals = context_.session.run(m.ops)
-                vals = [round(float(v), dt.precision) for v in vals]
+                for j in range(0, m.cnt):
+                    vals = context_.session.run(m.ops)
+                    vals = [round(float(v), dt.precision) for v in vals]
+                    for k in range(0, len(m.ops)):
+                        m_vals[k] += vals[k]
+                    if dt.util.datalink():
+                        dt.util.datalink_send_opt(
+                                dt.Opt(t='tm',
+                                       ep=cur_ep,
+                                       name=m.name,
+                                       idx=int(j),
+                                       vals=vals,
+                                       ts=dt.util.get_ts()))
                 for k in range(0, len(m.ops)):
-                    m_vals[k] += vals[k]
-                if dt.util.datalink():
-                    dt.util.datalink_send_opt(
-                            dt.Opt(t='tm',
-                                   ep=cur_ep,
-                                   name=m.name,
-                                   idx=int(j),
-                                   vals=vals,
-                                   ts=dt.util.get_ts()))
-            for k in range(0, len(m.ops)):
-                m_vals[k] = m_vals[k] / m.cnt
-                metric_info += " {}/{} {:.6f},".format(m.name, m_names[k], m_vals[k])
-                m_summary = Summary(value=[Summary.Value(tag="metrics/{}/{}".format(m.name, m_names[k]),
-                                                         simple_value=m_vals[k])])
-                opt_.summary_writer.add_summary(m_summary, cur_step)
+                    m_vals[k] = m_vals[k] / m.cnt
+                    metric_info += " {}/{} {:.6f},".format(m.name, m_names[k], m_vals[k])
+                    m_summary = Summary(value=[Summary.Value(tag="metrics/{}/{}".format(m.name, m_names[k]),
+                                                             simple_value=m_vals[k])])
+                    opt_.summary_writer.add_summary(m_summary, cur_step)
 
         dt.info(dt.DC.TRAIN, '\t%s Epoch[%03d:lr=%.6f:gs=%d] loss %s, acc %s,%s %.3f img/s' %
                 (time.strftime("%H:%M:%S", time.gmtime(cur_time - opt.train_start)),
@@ -387,7 +388,7 @@ def train(**kwargs):
                   model_dir='asset/train', tf_random_seed=12345, op_random_seed=12345,
                   max_ep=100000 // hvd.size(), summary_freq=16, summary_steps=100,
                   save_interval=600, max_keep=5, keep_interval=1000,
-                  valid_metric=[],
+                  valid_metric=[], validate_ep=0,
                   tqdm=None)
 
     # stats

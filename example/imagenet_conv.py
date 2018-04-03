@@ -34,7 +34,7 @@ if ARGS.port > 1000 and hvd.rank() == 0:
 with dt.ctx(optim=ARGS.optim, lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal,
             lr_curve=ARGS.lr_curve):
     dt.train.train(args=ARGS, est_class = dt.estimator.ImageNetEstimator, est_cfg=dt.Opt(),
-                   batch_size=ARGS.batch_size, summary_freq=4,
+                   batch_size=ARGS.batch_size, summary_freq=2, validate_ep=ARGS.validate_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    tf_random_seed=1234 * (hvd.rank()+1))
 

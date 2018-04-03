@@ -73,7 +73,7 @@ class ImageNetEstimator(estimator.BaseEstimator):
     def define_validation(self):
         valid_metric = []
         args = self._opt.args
-        if args.validate:
+        if args.validate_ep > 0:
             with tf.name_scope('valid'):
                 vx = self._opt.data.vx
                 vy = self._opt.data.vy

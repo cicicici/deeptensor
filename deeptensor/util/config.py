@@ -68,7 +68,7 @@ class Config(object):
             self.args_parser.add_argument('--shortcut', type=str, help='Shortcut type (identity/1x1conv)')
             self.args_parser.add_argument('--class_num', type=int, help='Number of classes (10/100/1000)')
             self.args_parser.add_argument('--class_min', type=int, help='Minimal index of the first class (0)')
-            self.args_parser.add_argument('--validate', type=str, help='Enable online validation (true/false)')
+            self.args_parser.add_argument('--validate_ep', type=int, help='Validate every [n] epochs, set 0 to disable')
 
     def parse_args(self):
         self._args = self.args_parser.parse_args(self._argv)
