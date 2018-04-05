@@ -54,6 +54,7 @@ class Config(object):
             self.args_parser.add_argument('--idx_file', type=str, help='Index file')
             self.args_parser.add_argument('--batch_size', type=int, help='Batch size')
             self.args_parser.add_argument('--valid_size', type=int, help='Valid size')
+            self.args_parser.add_argument('--shard', type=str, help='Enable sharding for multi-gpu (true/false)')
             self.args_parser.add_argument('--model_name', type=str, help='Model name (resnet)')
             self.args_parser.add_argument('--model_type', type=str, help='Model type (v1/v2)')
             self.args_parser.add_argument('--block_type', type=str, help='Block type (basic/bottleneck)')

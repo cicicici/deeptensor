@@ -22,7 +22,7 @@ class ImageNetEstimator(estimator.BaseEstimator):
                                        distorted=True, out_height=224, out_width=224).init_data()
             else:
                 data = dt.data.ImageNet(args.data_dir, data_type=args.data_type, batch_size=args.batch_size, valid_size=args.valid_size,
-                                        shuffle_size=args.shuffle_size, distorted=True, preproc_threads=8,
+                                        shuffle_size=args.shuffle_size, distorted=True, shard=args.shard, preproc_threads=8,
                                         class_num=args.class_num, class_min=args.class_min).init_data()
 
             ep_size = data.train.num_batch

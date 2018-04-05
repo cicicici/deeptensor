@@ -40,7 +40,7 @@ class ImageNet(object):
     _data_dir = './_asset/imagenet'
 
     def __init__(self, data_dir, data_type='tfrecord', batch_size=32, valid_size=100, preproc_threads=4, splits=1,
-                 shuffle=True, shuffle_size=0, distorted=True, class_num=1000, class_min=0):
+                 shuffle=True, shuffle_size=0, shard=True, distorted=True, class_num=1000, class_min=0):
         self._data_dir = data_dir
         self._data_type = data_type
         self._batch_size = batch_size
@@ -49,6 +49,7 @@ class ImageNet(object):
         self._splits = splits
         self._shuffle = shuffle
         self._shuffle_size = shuffle_size
+        self._shard = shard
         self._distorted = distorted
 
         self._class_num = class_num
@@ -64,7 +65,7 @@ class ImageNet(object):
             b_size = self._valid_size
 
         tfrecord = dt.data.ImageTFRecord(filenames, num_images, self._class_num, _DEFAULT_IMAGE_SIZE, _DEFAULT_IMAGE_SIZE, _NUM_CHANNELS,
-                                         batch_size=b_size, shuffle=shuffle, shuffle_size=self._shuffle_size, epochs=10000, shard=is_training,
+                                         batch_size=b_size, shuffle=shuffle, shuffle_size=self._shuffle_size, epochs=10000, shard=(self._shard and is_training),
                                          is_training=is_training, distorted=self._distorted, one_hot=False, preproc_threads=self._preproc_threads).init_data()
         dt.debug(dt.DC.DATA, 'TFRecord: training {}, images {}, batches {}, batch_size {}'
                                  .format(is_training, tfrecord._num_images, tfrecord._num_batch, b_size))
