@@ -36,7 +36,7 @@ with dt.ctx(optim=ARGS.optim, lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_min
                    batch_size=ARGS.batch_size, summary_freq=ARGS.summary_freq,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
-                   tf_random_seed=1234 * (hvd.rank()+1))
+                   tf_random_seed=1234 * (hvd.rank()+1), deferred=ARGS.deferred)
 
 dt.util.datalink_close()
 

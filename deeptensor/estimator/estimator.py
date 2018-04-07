@@ -58,7 +58,8 @@ class BaseEstimator(object):
 
     def get_train_op(self, loss):
         grad_op = dt.train.optim(loss, optim=self._opt.optim, lr=self._opt.lr,
-                                 beta1=self._opt.beta1, beta2=self._opt.beta2, category=self._opt.category)
+                                 beta1=self._opt.beta1, beta2=self._opt.beta2, category=self._opt.category,
+                                 deferred=self._opt.deferred)
 
         update_op = [t for t in tf.get_collection(tf.GraphKeys.UPDATE_OPS)]
 
@@ -67,11 +68,7 @@ class BaseEstimator(object):
         return train_op
 
     def get_train_post_op(self):
-        horovod_op = [t for t in tf.get_collection('horovod_grad_flip')]
-
-        post_op = tf.group(*(horovod_op))
-
-        return post_op
+        return []
 
     def get_model_fn(self):
 
@@ -148,6 +145,7 @@ class BaseEstimator(object):
             if is_training:
                 training_hooks = dt.train.build_train_hooks(self._opt)
                 training_hooks.extend(self.build_train_hooks(False))
+                training_hooks.append(hvd.PostStepHook())
 
                 training_chief_hooks = []
                 if hvd.rank() == 0:

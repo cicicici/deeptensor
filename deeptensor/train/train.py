@@ -51,7 +51,7 @@ def optim(loss, **kwargs):
     opt = dt.Opt(kwargs)
 
     # default training options
-    opt += dt.Opt(optim='MaxProp', lr=0.001, beta1=0.9, beta2=0.99, momentum=0.9, category='')
+    opt += dt.Opt(optim='MaxProp', lr=0.001, beta1=0.9, beta2=0.99, momentum=0.9, category='', deferred=False)
 
     dt.debug(dt.DC.TRAIN, "[OPTIM] {}, lr {}, beta1 {}, beta2 {}, momentum {}, category {}"
                                  .format(opt.optim, opt.lr, opt.beta1, opt.beta2, opt.momentum, opt.catetory))
@@ -71,7 +71,7 @@ def optim(loss, **kwargs):
         optimizer = tf.train.GradientDescentOptimizer(opt.lr)
 
     with tf.name_scope('horovod'):
-        hvd_optimizer = hvd.DistributedOptimizer(optimizer)
+        hvd_optimizer = hvd.DistributedOptimizer(optimizer, deferred=opt.deferred)
 
         grad_op = hvd_optimizer.minimize(loss=loss,
                                          global_step=tf.train.get_global_step())
@@ -312,7 +312,8 @@ def build_train_hooks(opt):
         cur_ep = int(cur_step // opt_.data.ep_size)
         cur_ep_step = int(cur_step % opt_.data.ep_size)
 
-        context_.session.run(opt_.post_op)
+        if len(opt_.post_op) > 0:
+            context_.session.run(opt_.post_op)
 
         #if dt.util.datalink():
         #    dt.util.datalink_send_opt(
@@ -411,7 +412,7 @@ def train(**kwargs):
     opt += dt.Opt(lr_initial=0.001, lr_minimal=1e-6, lr_curve=[[0.1, 10, 1]])
 
     # default training options
-    opt += dt.Opt(optim='MaxProp', beta1=0.9, beta2=0.99, category='',
+    opt += dt.Opt(optim='MaxProp', beta1=0.9, beta2=0.99, category='', deferred=False,
                   model_dir='asset/train', tf_random_seed=12345, op_random_seed=12345,
                   max_ep=100000, summary_freq=16, summary_steps=100,
                   save_interval=600, max_keep=5, keep_interval=1000,

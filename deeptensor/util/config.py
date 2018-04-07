@@ -74,6 +74,7 @@ class Config(object):
             self.args_parser.add_argument('--class_min', type=int, help='Minimal index of the first class (0)')
             self.args_parser.add_argument('--validate_ep', type=int, help='Validate every [n] epochs, set 0 to disable')
             self.args_parser.add_argument('--max_ep', type=int, help='Maximum epochs to run, (default: 1000)')
+            self.args_parser.add_argument('--deferred', type=str, help='Enable deferred allreduce (true/false)')
         elif self._app == 'scraper':
             self.args_parser.add_argument('--data_dir', type=str, help='Data dir')
             self.args_parser.add_argument('--data_filter', type=str, help='Data dir filter')
