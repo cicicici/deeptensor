@@ -66,6 +66,13 @@ class BaseEstimator(object):
 
         return train_op
 
+    def get_train_post_op(self):
+        horovod_op = [t for t in tf.get_collection('horovod_grad_flip')]
+
+        post_op = tf.group(*(horovod_op))
+
+        return post_op
+
     def get_model_fn(self):
 
         def model_fn(features, labels, mode, params):
@@ -116,6 +123,7 @@ class BaseEstimator(object):
             train_op = None
             if is_training:
                 train_op = self.get_train_op(total_loss)
+                self._opt.post_op = self.get_train_post_op()
 
             # validation
             if is_training:

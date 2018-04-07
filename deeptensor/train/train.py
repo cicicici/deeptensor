@@ -290,14 +290,14 @@ def build_train_hooks(opt):
                            acc=round(float(np.mean(cur_acc)), dt.precision),
                            ts=dt.util.get_ts()))
 
-        if opt_.tqdm is None:
-            opt_.tqdm = tqdm(total=opt_.data.ep_size, initial=cur_ep_step, desc='train', ncols=80, unit='b', leave=False)
-        if cur_ep_step == opt_.data.ep_size - 1:
-            opt_.tqdm.close()
-            opt_.tqdm = None
-        else:
-            opt_.tqdm.update(1)
-
+        if hvd.rank() == 0:
+            if opt_.tqdm is None:
+                opt_.tqdm = tqdm(total=opt_.data.ep_size, initial=cur_ep_step, desc='train', ncols=80, unit='b', leave=False)
+            if cur_ep_step == opt_.data.ep_size - 1:
+                opt_.tqdm.close()
+                opt_.tqdm = None
+            else:
+                opt_.tqdm.update(1)
 
     batch_log_task_hook = _ScheduledTaskHook(every_n_steps=1,
                                              every_n_secs=None,
@@ -306,6 +306,29 @@ def build_train_hooks(opt):
                                              opt=opt,
                                              task_fn=batch_log,
                                              task_ops={'lr': opt.lr, 'loss': opt.loss_0, 'acc': opt.acc_0})
+
+    def batch_post(context_, values_, opt_, time_, steps_):
+        cur_step = int(values_.results["global_step"])
+        cur_ep = int(cur_step // opt_.data.ep_size)
+        cur_ep_step = int(cur_step % opt_.data.ep_size)
+
+        context_.session.run(opt_.post_op)
+
+        #if dt.util.datalink():
+        #    dt.util.datalink_send_opt(
+        #            dt.Opt(t='bp',
+        #                   s=cur_step,
+        #                   ep=cur_ep,
+        #                   cs=cur_ep_step,
+        #                   ts=dt.util.get_ts()))
+
+    batch_post_task_hook = _ScheduledTaskHook(every_n_steps=1,
+                                              every_n_secs=None,
+                                              global_step=dt.train.global_step(),
+                                              summary_writer=opt.summary_writer,
+                                              opt=opt,
+                                              task_fn=batch_post,
+                                              task_ops=None)
 
     train_hooks = []
 
@@ -317,6 +340,7 @@ def build_train_hooks(opt):
     train_hooks.append(summary_hook)
     train_hooks.append(timed_summary_hook)
     train_hooks.append(batch_log_task_hook)
+    train_hooks.append(batch_post_task_hook)
 
     return train_hooks
 
