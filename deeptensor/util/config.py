@@ -27,8 +27,10 @@ class Config(object):
 
         self.init_args()
         self.parse_args()
+        self.default_config()
         self.init_config()
         self.save_config()
+        self.post_config()
 
     def init_args(self):
         self.args_parser = argparse.ArgumentParser(
@@ -70,10 +72,63 @@ class Config(object):
             self.args_parser.add_argument('--class_num', type=int, help='Number of classes (10/100/1000)')
             self.args_parser.add_argument('--class_min', type=int, help='Minimal index of the first class (0)')
             self.args_parser.add_argument('--validate_ep', type=int, help='Validate every [n] epochs, set 0 to disable')
+            self.args_parser.add_argument('--max_ep', type=int, help='Maximum epochs to run, (default: 1000)')
+
 
     def parse_args(self):
         self._args = self.args_parser.parse_args(self._argv)
         #print(self._args)
+
+    def default_config(self):
+        self._default_config = {}
+
+        section = 'args'
+        self._default_config[section] = {}
+        # common configurations
+        self._default_config[section]['name'] = "ImageNet ResNet-50"
+        self._default_config[section]['tag'] = ""
+        self._default_config[section]['host'] = "127.0.0.1"
+        self._default_config[section]['port'] = 7001
+        self._default_config[section]['out_dir'] = "_train/imagenet"
+        self._default_config[section]['model_dir'] = ""
+
+        # training configurations
+        if self._app == 'train':
+            self._default_config[section]['data_dir'] = "_datasets/ILSVRC2012"
+            self._default_config[section]['data_type'] = "tfrecord"
+            self._default_config[section]['idx_file'] = ""
+            self._default_config[section]['batch_size'] = 32
+            self._default_config[section]['valid_size'] = 250
+            self._default_config[section]['shard'] = True
+            self._default_config[section]['model_name'] = "resnet"
+            self._default_config[section]['model_type'] = "v2"
+            self._default_config[section]['block_type'] = "bottleneck"
+            self._default_config[section]['blocks'] = [3, 4, 6, 3]
+            self._default_config[section]['regularizer'] = "l2"
+            self._default_config[section]['conv_decay'] = 1e-5
+            self._default_config[section]['fc_decay'] = 1e-5
+            self._default_config[section]['optim'] = "Momentum"
+            self._default_config[section]['lr_initial'] = 0.1
+            self._default_config[section]['lr_minimal'] = 1e-8
+            self._default_config[section]['lr_curve'] = [[0.1, 30, 3], [0.1, 20, 1]]
+            self._default_config[section]['shortcut'] = "identity"
+            self._default_config[section]['class_num'] = 1001
+            self._default_config[section]['class_min'] = 0
+            self._default_config[section]['validate_ep'] = 10
+            self._default_config[section]['max_ep'] = 1000
+
+            # no command line argument
+            self._default_config[section]['save_interval'] = 600
+            self._default_config[section]['dataset'] = "imagenet"
+            self._default_config[section]['shuffle_size'] = 2048
+            self._default_config[section]['summary_freq'] = 2
+            self._default_config[section]['deferred'] = False
+
+        # debug configurations
+        section = 'debug'
+        self._default_config[section] = {}
+        self._default_config[section]['channel'] = 255
+        self._default_config[section]['level'] = 5
 
     def init_config(self):
         self._config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
@@ -107,9 +162,16 @@ class Config(object):
                     self._opt.args[arg] = val
                 self._config['args'][arg] = val_str
 
+        for section in self._default_config:
+            opt = dt.Opt()
+            for key in self._default_config[section]:
+                if key not in self._opt[section]:
+                    opt[key] = self._default_config[section][key]
+                    self._config[section][key] = json.dumps(opt[key])
+            self._opt[section] += opt
+
     def save_config(self):
         model_dir = self._opt.args.model_dir
-        print(model_dir)
         if not (model_dir is not None and model_dir.startswith('/')):
             if model_dir is None or len(model_dir) == 0:
                 model_dir=time.strftime('%Y%m%d_%H%M%S', time.localtime())
@@ -125,18 +187,29 @@ class Config(object):
         except:
             pass
         self._opt.args.model_dir = model_dir
-        self._config['args']['model_dir'] = '"' + model_dir + '"'
+        self._config['args']['_model_dir'] = '"' + model_dir + '"'
         # config file
         with open('{}/config.ini'.format(model_dir), 'w') as configfile:
             self._config.write(configfile)
         # log file
         dt.set_log_file('{}/log.txt'.format(model_dir))
 
+        self._model_dir = model_dir
+
+    def post_config(self):
+        # Set debug settings
+        dt.dbg_cfg(level=self._opt.debug.level,
+                   channel=self._opt.debug.channel)
+
+        # dump important information
+        dt.info(dt.DC.STD, "{} - {}".format(self._opt.args.name, self._opt.args.tag))
+        dt.info(dt.DC.STD, "Rank {}: command [{}], argv [{}]".format(hvd.rank(), self._command, self._argv))
+        dt.info(dt.DC.STD, "Rank {}: model_dir [{}]".format(hvd.rank(), self._model_dir))
+        dt.info(dt.DC.STD, "Rank {}: opt [{}]".format(hvd.rank(), self._opt))
+
     def dump_config(self):
-        dt.log(dt.DC.STD, dt.DL.INFO, "{} - {}".format(self._opt.args.name, self._opt.args.tag))
-        dt.print_pp(self._opt)
         if self._app == 'train':
-            dt.log(dt.DC.NET, dt.DL.INFO, "Tensorboard: $ tensorboard --logdir {} --port {}".format(self._opt.args.model_dir, 6006))
+            dt.info(dt.DC.NET, "Tensorboard: $ tensorboard --logdir {} --port {}".format(self._model_dir, 6006))
 
     def opt(self):
         return self._opt;
