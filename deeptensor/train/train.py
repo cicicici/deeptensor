@@ -309,7 +309,7 @@ def build_train_hooks(opt):
 
     train_hooks = []
 
-    last_step = opt.max_ep*opt.data.ep_size + 1
+    last_step = opt.max_ep * opt.data.ep_size
     train_hooks.append(tf.train.StopAtStepHook(num_steps=None, last_step=last_step))
 
     #train_hooks.append(tf.train.NanTensorHook(loss))

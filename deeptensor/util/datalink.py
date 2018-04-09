@@ -93,15 +93,19 @@ class DataLink(object):
 
     def server_listen(self):
         while self._running:
-            client_sock, address = self._server.accept()
-            client_id = "{}:{}".format(address[0], address[1])
-            print('\n[Server] Accepted connection from {}'.format(client_id))
-            client_handler = threading.Thread(
-                target=self.handle_client_connection,
-                args=(client_id, client_sock,)
-            )
-            client_handler.start()
-            self._clients[client_id] = client_sock
+            try:
+                client_sock, address = self._server.accept()
+                client_id = "{}:{}".format(address[0], address[1])
+                print('\n[Server] Accepted connection from {}'.format(client_id))
+                client_handler = threading.Thread(
+                    target=self.handle_client_connection,
+                    args=(client_id, client_sock,)
+                )
+                client_handler.start()
+                self._clients[client_id] = client_sock
+            except:
+                print('\n[Server] Cannot accept connection. Shutting down.')
+                pass
 
     def client_listen(self):
         recv_bytes = bytearray(b'')
@@ -189,6 +193,23 @@ class DataLink(object):
     def register_recv(self, callback):
         self._recv_fns.add(callback)
 
+    def close(self):
+        if not self._connected:
+            return
+        self._connected = False
+        self._running = False
+
+        try:
+            if self._host is None:
+                for k, c in self._clients.items():
+                    c.close()
+                self._server.shutdown(socket.SHUT_RDWR)
+                self._server.close()
+            else:
+                self._client.close()
+        except:
+            return
+
 
 _datalink = None
 
@@ -196,13 +217,20 @@ def datalink_start(host=None, port=6001):
     global _datalink
     _datalink = DataLink(name='datalink', host=host, port=port)
 
+def datalink_close():
+    global _datalink
+    if _datalink is not None:
+        _datalink.close()
+        _datalink = None
+
 def datalink():
     global _datalink
     return _datalink
 
 def datalink_register_recv(recv_fn):
     global _datalink
-    _datalink.register_recv(recv_fn)
+    if _datalink is not None:
+        _datalink.register_recv(recv_fn)
 
 def datalink_send_opt(opt):
     global _datalink

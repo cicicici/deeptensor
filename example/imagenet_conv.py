@@ -38,3 +38,5 @@ with dt.ctx(optim=ARGS.optim, lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_min
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    tf_random_seed=1234 * (hvd.rank()+1))
 
+dt.util.datalink_close()
+
