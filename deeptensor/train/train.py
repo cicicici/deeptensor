@@ -308,7 +308,10 @@ def build_train_hooks(opt):
                                              task_ops={'lr': opt.lr, 'loss': opt.loss_0, 'acc': opt.acc_0})
 
     train_hooks = []
-    train_hooks.append(tf.train.StopAtStepHook(last_step=opt.max_ep*opt.data.ep_size))
+
+    last_step = opt.max_ep*opt.data.ep_size + 1
+    train_hooks.append(tf.train.StopAtStepHook(num_steps=None, last_step=last_step))
+
     #train_hooks.append(tf.train.NanTensorHook(loss))
     train_hooks.append(learning_rate_hook)
     train_hooks.append(summary_hook)
@@ -386,7 +389,7 @@ def train(**kwargs):
     # default training options
     opt += dt.Opt(optim='MaxProp', beta1=0.9, beta2=0.99, category='',
                   model_dir='asset/train', tf_random_seed=12345, op_random_seed=12345,
-                  max_ep=100000 // hvd.size(), summary_freq=16, summary_steps=100,
+                  max_ep=100000, summary_freq=16, summary_steps=100,
                   save_interval=600, max_keep=5, keep_interval=1000,
                   valid_metric=[], validate_ep=0,
                   tqdm=None)
@@ -394,7 +397,10 @@ def train(**kwargs):
     # stats
     opt += dt.Opt(stats=dt.Opt(avg_loss=None, avg_acc=None))
 
-    dt.info(dt.DC.TRAIN, 'Horovod: rank {}/{}, local {}'
+    dt.info(dt.DC.TRAIN, '[TRAIN] opt [{}]'
+                             .format(opt))
+
+    dt.info(dt.DC.TRAIN, '[HOROVOD] rank {}/{}, local {}'
                              .format(hvd.rank(), hvd.size(), hvd.local_rank()))
 
     est = opt.est_class(opt, opt.est_cfg)

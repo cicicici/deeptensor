@@ -150,8 +150,12 @@ class Config(object):
                 continue
             val_str = str(val)
 
-            if arg in self._opt.args:
-                opt_val = self._opt.args[arg]
+            if arg in self._opt.args or arg in self._default_config['args']:
+                if arg in self._opt.args:
+                    opt_val = self._opt.args[arg]
+                else:
+                    opt_val = self._default_config['args'][arg]
+
                 if isinstance(opt_val, str):
                     val_str = '"' + val_str + '"'
 
