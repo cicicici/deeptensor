@@ -73,6 +73,8 @@ class Config(object):
             self.args_parser.add_argument('--class_min', type=int, help='Minimal index of the first class (0)')
             self.args_parser.add_argument('--validate_ep', type=int, help='Validate every [n] epochs, set 0 to disable')
             self.args_parser.add_argument('--max_ep', type=int, help='Maximum epochs to run, (default: 1000)')
+        elif self._app == 'scraper':
+            self.args_parser.add_argument('--data_dir', type=str, help='Data dir')
 
 
     def parse_args(self):
@@ -123,6 +125,8 @@ class Config(object):
             self._default_config[section]['shuffle_size'] = 2048
             self._default_config[section]['summary_freq'] = 2
             self._default_config[section]['deferred'] = False
+        elif self._app == 'scraper':
+            self._default_config[section]['data_dir'] = "_train/imagenet"
 
         # debug configurations
         section = 'debug'

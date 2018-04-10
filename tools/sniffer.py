@@ -12,6 +12,9 @@ from bokeh.layouts import row, column, widgetbox
 
 import deeptensor as dt
 import tensorflow as tf
+import horovod.tensorflow as hvd
+
+hvd.init()
 
 # Configuration
 cfg = dt.util.Config(name="Sniffer", app="sniffer")
