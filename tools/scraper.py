@@ -103,8 +103,24 @@ def scan_line(stats, line):
                 else:
                     stats[pat.name][fld.name].append(match)
 
-def print_data(df):
-    print(df)
+def print_data(stats):
+    fld_fmt = ">\t"
+    fields = []
+    count = None
+    for fld in stats:
+        fld_fmt += "\t{}"
+        fields.append(fld)
+        if count is None:
+            count = len(stats[fld])
+    print(fld_fmt.format(*fields))
+
+    for i in range(count):
+        data_fmt = ">\t{}"
+        data = [i]
+        for fld in fields:
+            data_fmt += "\t{}"
+            data.append(stats[fld][i])
+        print(data_fmt.format(*data))
 
 def analyze_mode(data_dir, model_dir):
     rank_path = os.path.join(data_dir, model_dir, "r0")
@@ -131,8 +147,8 @@ def analyze_mode(data_dir, model_dir):
     df_valid = pd.DataFrame(data=model_stats.valid)
 
     if ARGS.add.detail:
-        print_data(df_epoch)
-        print_data(df_valid)
+        print_data(model_stats.epoch)
+        print_data(model_stats.valid)
 
     fields = [model_dir.ljust(32),
               df_valid['acc1'].max(),
