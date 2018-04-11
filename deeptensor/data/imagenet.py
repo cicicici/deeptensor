@@ -30,7 +30,7 @@ def get_filenames(is_training, data_dir):
             for i in range(_NUM_VALID_FILES)]
 
 def _distort_image(image, label, is_training):
-    image = dt.data.vgg_processing.preprocess_image(image, 224, 224, is_training=is_training)
+    image = dt.data.vgg_preprocessing.preprocess_image(image, 224, 224, is_training=is_training)
     #if is_training:
     #    image, label = dt.data.image_processing.distort_image(image, label, height=224, width=224, resize=False, flip=False, color=True)
     return image, label

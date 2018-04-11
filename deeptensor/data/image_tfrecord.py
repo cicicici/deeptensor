@@ -58,7 +58,7 @@ class ImageTFRecord(object):
         image = tf.image.decode_jpeg(image, channels=self._channels)
         image = tf.image.convert_image_dtype(image, dtype=tf.float32)
 
-        image = dt.data.vgg_processing.preprocess_image(image, self._out_height, self._out_width, is_training=is_training)
+        image = dt.data.vgg_preprocessing.preprocess_image(image, self._out_height, self._out_width, is_training=is_training)
         label = tf.cast(tf.reshape(label, shape=[]), dtype=tf.int32)
 
         if self._one_hot:
