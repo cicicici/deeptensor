@@ -109,12 +109,23 @@ class ImageTFRecord(object):
         return features['image/encoded'], label, bbox
 
     def parse_record(self, raw_record, is_training):
-        image, label, bbox = self._parse_example_proto(raw_record)
+        image_buffer, label, bbox = self._parse_example_proto(raw_record)
 
-        image = tf.image.decode_jpeg(image, channels=self._channels)
+        # vgg preprocessing
+        #image = tf.image.decode_jpeg(image_buffer, channels=self._channels)
+        #image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+        #image = dt.data.vgg_preprocessing.preprocess_image(image, self._out_height, self._out_width,
+        #                                                   is_training=is_training)
+
+        # google preprocessing
+        image = dt.data.imagenet_preprocessing.preprocess_image(image_buffer=image_buffer,
+                                                                bbox=bbox,
+                                                                output_height=self._out_height,
+                                                                output_width=self._out_width,
+                                                                num_channels=self._channels,
+                                                                is_training=is_training)
         image = tf.image.convert_image_dtype(image, dtype=tf.float32)
 
-        image = dt.data.vgg_preprocessing.preprocess_image(image, self._out_height, self._out_width, is_training=is_training)
         label = tf.cast(tf.reshape(label, shape=[]), dtype=tf.int32)
 
         if self._one_hot:
