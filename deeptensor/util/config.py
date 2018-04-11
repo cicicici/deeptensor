@@ -75,7 +75,7 @@ class Config(object):
             self.args_parser.add_argument('--max_ep', type=int, help='Maximum epochs to run, (default: 1000)')
         elif self._app == 'scraper':
             self.args_parser.add_argument('--data_dir', type=str, help='Data dir')
-
+            self.args_parser.add_argument('--data_filter', type=str, help='Data dir filter')
 
     def parse_args(self):
         self._args = self.args_parser.parse_args(self._argv)
@@ -127,6 +127,7 @@ class Config(object):
             self._default_config[section]['deferred'] = False
         elif self._app == 'scraper':
             self._default_config[section]['data_dir'] = "_train/imagenet"
+            self._default_config[section]['data_filter'] = ".+"
 
         # debug configurations
         section = 'debug'
