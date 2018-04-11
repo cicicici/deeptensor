@@ -130,8 +130,9 @@ def analyze_mode(data_dir, model_dir):
     df_epoch = pd.DataFrame(data=model_stats.epoch)
     df_valid = pd.DataFrame(data=model_stats.valid)
 
-    #print_data(df_epoch)
-    #print_data(df_valid)
+    if ARGS.add.detail:
+        print_data(df_epoch)
+        print_data(df_valid)
 
     fields = [model_dir.ljust(32),
               df_valid['acc1'].max(),

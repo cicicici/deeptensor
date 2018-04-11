@@ -49,6 +49,7 @@ class Config(object):
         self.args_parser.add_argument('--port', type=int, help='Datalink port')
         self.args_parser.add_argument('--out_dir', type=str, help='Output dir')
         self.args_parser.add_argument('--model_dir', type=str, help='Model dir')
+        self.args_parser.add_argument('--add', type=str, help='Addtitional options')
 
         if self._app == 'train':
             self.args_parser.add_argument('--data_dir', type=str, help='Data dir')
@@ -93,6 +94,7 @@ class Config(object):
         self._default_config[section]['port'] = 7001
         self._default_config[section]['out_dir'] = "_train/imagenet"
         self._default_config[section]['model_dir'] = ""
+        self._default_config[section]['add'] = {}
 
         # training configurations
         if self._app == 'train':
@@ -141,6 +143,7 @@ class Config(object):
 
         self._opt = dt.Opt()
 
+        # load config to opt
         for section in self._config.sections():
             opt = dt.Opt()
             for key in self._config[section]:
@@ -149,6 +152,7 @@ class Config(object):
                 opt[key] = val
             self._opt[section] = opt
 
+        # override with command line args
         for arg in vars(self._args):
             val = getattr(self._args, arg)
             if val is None:
@@ -171,6 +175,7 @@ class Config(object):
                     self._opt.args[arg] = val
                 self._config['args'][arg] = val_str
 
+        # add default settings
         for section in self._default_config:
             opt = dt.Opt()
             for key in self._default_config[section]:
@@ -178,6 +183,10 @@ class Config(object):
                     opt[key] = self._default_config[section][key]
                     self._config[section][key] = json.dumps(opt[key])
             self._opt[section] += opt
+
+        # additional post process
+        if self._opt.args.add is not None and type(self._opt.args.add) is dict:
+            self._opt.args.add = dt.util.dict_to_opt(self._opt.args.add)
 
     def save_config(self):
         model_dir = self._opt.args.model_dir
