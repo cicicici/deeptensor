@@ -65,7 +65,7 @@ def resnet_v1(in_tensor, num_classes,
               pool0_size=0, pool0_stride=2,
               base_dim=16,
               regularizer='l2', conv_decay=1e-4, fc_decay=1e-4,
-              shortcut='identity'):
+              shortcut='identity', weight_filler='variance', use_bias=False):
 
     block_layers = 2
     if block_type == 'bottleneck':
@@ -77,8 +77,8 @@ def resnet_v1(in_tensor, num_classes,
                                          base_dim, 1 + sum(blocks) * block_layers + 1))
     n = in_tensor
     # conv layers
-    with dt.ctx(name='convs', act='relu', bn=True, weight_filler='xavier',
-                regularizer=regularizer, weight_decay=conv_decay,
+    with dt.ctx(name='convs', act='relu', bn=True, weight_filler=weight_filler,
+                regularizer=regularizer, weight_decay=conv_decay, bias=use_bias,
                 pad='SAME', padding=None):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
 
@@ -97,8 +97,8 @@ def resnet_v1(in_tensor, num_classes,
         n = dt.transform.pool(n, size=(8, 8), stride=[8, 8], name='pool1', avg=True)
 
     # fc layers
-    with dt.ctx(name='fcs', act='relu', bn=True, weight_filler='xavier',
-                regularizer=regularizer, weight_decay=fc_decay):
+    with dt.ctx(name='fcs', act='relu', bn=True, weight_filler=weight_filler,
+                regularizer=regularizer, weight_decay=fc_decay, bias=use_bias):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
         n = dt.transform.flatten(n)
         #n = dt.layer.dense(n, dim=256, name='fc1')
@@ -137,7 +137,7 @@ def resnet_v2(in_tensor, num_classes,
               pool0_size=0, pool0_stride=2,
               base_dim=16,
               regularizer='l2', conv_decay=1e-4, fc_decay=1e-4,
-              shortcut='identity'):
+              shortcut='identity', weight_filler='variance', use_bias=False):
 
     block_layers = 2
     if block_type == 'bottleneck':
@@ -149,8 +149,8 @@ def resnet_v2(in_tensor, num_classes,
                                          base_dim, 1 + sum(blocks) * block_layers + 1))
     n = in_tensor
     # conv layers
-    with dt.ctx(name='convs', act='relu', bn=True, weight_filler='xavier',
-                regularizer=regularizer, weight_decay=conv_decay,
+    with dt.ctx(name='convs', act='relu', bn=True, weight_filler=weight_filler,
+                regularizer=regularizer, weight_decay=conv_decay, bias=use_bias,
                 pad='SAME', padding=None):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
 
@@ -172,8 +172,8 @@ def resnet_v2(in_tensor, num_classes,
         n = dt.transform.pool(n, size=(8, 8), stride=[8, 8], name='pool1', avg=True)
 
     # fc layers
-    with dt.ctx(name='fcs', act='relu', bn=True, weight_filler='xavier',
-                regularizer=regularizer, weight_decay=fc_decay):
+    with dt.ctx(name='fcs', act='relu', bn=True, weight_filler=weight_filler,
+                regularizer=regularizer, weight_decay=fc_decay, bias=use_bias):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
         n = dt.transform.flatten(n)
         #n = dt.layer.dense(n, dim=256, name='fc1')
