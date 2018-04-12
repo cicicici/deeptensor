@@ -144,11 +144,11 @@ class ImageTFRecord(object):
         dataset = tf.data.Dataset.from_tensor_slices(self._filenames)
         if self._shard:
             dataset = dataset.shard(hvd.size(), hvd.rank())
-        dataset = dataset.repeat(self._epochs)
+        #dataset = dataset.repeat(self._epochs)
 
         if self._shuffle:
             dataset = dataset.shuffle(buffer_size=self._num_files)
-        dataset = dataset.repeat()
+        #dataset = dataset.repeat()
 
         dataset = dataset.flat_map(tf.data.TFRecordDataset)
         dataset = dataset.prefetch(buffer_size=int(self._batch_size * self._record_prefetch_factor))
