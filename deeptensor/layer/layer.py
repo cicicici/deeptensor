@@ -33,9 +33,13 @@ def conv(tensor, opt):
     if opt.weight_filler == 'xavier':
         w = dt.initializer.glorot_uniform('W', (size[0], size[1], opt.in_dim, opt.dim),
                                           regularizer=opt.regularizer_func, summary=opt.summary)
-    else:
+    elif opt.weight_filler == 'he':
         w = dt.initializer.he_uniform('W', (size[0], size[1], opt.in_dim, opt.dim),
                                       regularizer=opt.regularizer_func, summary=opt.summary)
+    else:
+        w = dt.initializer.variance_scaling('W', (size[0], size[1], opt.in_dim, opt.dim),
+                                            regularizer=opt.regularizer_func, summary=opt.summary)
+
     b = dt.initializer.constant('b', opt.dim, summary=opt.summary) if opt.bias else 0
 
     # apply convolution

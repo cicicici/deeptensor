@@ -38,6 +38,19 @@ def glorot_uniform(name, shape, scale=1, dtype=dt.floatx, summary=True, regulari
     s = np.sqrt(6. * scale / (fin + fout))
     return uniform(name, shape, s, dtype, summary, regularizer, trainable)
 
+def variance_scaling(name, shape, scale=1, mode='fan_in', distribution='normal', dtype=dt.floatx, summary=True, regularizer=None, trainable=True):
+    shape = shape if isinstance(shape, (tuple, list)) else [shape]
+    x = tf.get_variable(name, shape, dtype=dtype,
+                        initializer=tf.variance_scaling_initializer(scale=scale,
+                                                                    mode=mode,
+                                                                    distribution=distribution,
+                                                                    dtype=dtype),
+                        regularizer=regularizer, trainable=trainable)
+    # add summary
+    if summary:
+        dt.summary_param(x)
+    return x
+
 def identity(name, dim, scale=1, dtype=dt.floatx, summary=True, regularizer=None, trainable=True):
     x = tf.get_variable(name,
                         initializer=tf.constant(np.eye(dim) * scale, dtype=dtype),
