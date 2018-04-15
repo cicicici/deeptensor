@@ -53,8 +53,8 @@ def optim(loss, **kwargs):
     # default training options
     opt += dt.Opt(optim='MaxProp', lr=0.001, beta1=0.9, beta2=0.99, momentum=0.9, category='')
 
-    dt.debug(dt.DC.TRAIN, "[OPTIM] {}, lr {}, beta1 {}, beta2 {}, momentum {}, category {}"
-                                 .format(opt.optim, opt.lr, opt.beta1, opt.beta2, opt.momentum, opt.catetory))
+    dt.debug(dt.DC.TRAIN, "[OPTIM] {}, lr {}, beta1 {}, beta2 {}, momentum {}, category {}, deferred {}"
+                                 .format(opt.optim, opt.lr, opt.beta1, opt.beta2, opt.momentum, opt.catetory, opt.deferred))
 
     # select optimizer
     if opt.optim == 'MaxProp':
@@ -387,7 +387,7 @@ def train(**kwargs):
     opt += dt.Opt(lr_initial=0.001, lr_minimal=1e-6, lr_curve=[[0.1, 10, 1]])
 
     # default training options
-    opt += dt.Opt(optim='MaxProp', beta1=0.9, beta2=0.99, category='',
+    opt += dt.Opt(optim='MaxProp', beta1=0.9, beta2=0.99, momentum=0.9, category='',
                   model_dir='asset/train', tf_random_seed=12345, op_random_seed=12345,
                   max_ep=100000, summary_freq=16, summary_steps=100,
                   save_interval=600, max_keep=5, keep_interval=1000,

@@ -58,7 +58,8 @@ class BaseEstimator(object):
 
     def get_train_op(self, loss):
         grad_op = dt.train.optim(loss, optim=self._opt.optim, lr=self._opt.lr,
-                                 beta1=self._opt.beta1, beta2=self._opt.beta2, category=self._opt.category)
+                                 beta1=self._opt.beta1, beta2=self._opt.beta2, momentum=self._opt.momentum,
+                                 category=self._opt.category)
 
         update_op = [t for t in tf.get_collection(tf.GraphKeys.UPDATE_OPS)]
 

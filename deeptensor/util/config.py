@@ -69,6 +69,9 @@ class Config(object):
             self.args_parser.add_argument('--lr_initial', type=float, help='Initial learning rate (0.001)')
             self.args_parser.add_argument('--lr_minimal', type=float, help='Minimal learning rate (1e-8)')
             self.args_parser.add_argument('--lr_curve', type=str, help='Learning reate curve ([[0.1, 80, 1]])')
+            self.args_parser.add_argument('--momentum', type=float, help='Optimizer momentum (0.9)')
+            self.args_parser.add_argument('--beta1', type=float, help='Optimizer beta1 (0.9)')
+            self.args_parser.add_argument('--beta2', type=float, help='Optimizer beta2 (0.99)')
             self.args_parser.add_argument('--shortcut', type=str, help='Shortcut type (identity/1x1conv)')
             self.args_parser.add_argument('--class_num', type=int, help='Number of classes (10/100/1000)')
             self.args_parser.add_argument('--class_min', type=int, help='Minimal index of the first class (0)')
@@ -115,6 +118,9 @@ class Config(object):
             self._default_config[section]['lr_initial'] = 0.1
             self._default_config[section]['lr_minimal'] = 1e-8
             self._default_config[section]['lr_curve'] = [[0.1, 30, 3], [0.1, 20, 1]]
+            self._default_config[section]['momentum'] = 0.9
+            self._default_config[section]['beta1'] = 0.9
+            self._default_config[section]['beta2'] = 0.99
             self._default_config[section]['shortcut'] = "identity"
             self._default_config[section]['class_num'] = 1001
             self._default_config[section]['class_min'] = 0
