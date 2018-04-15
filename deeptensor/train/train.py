@@ -84,7 +84,7 @@ class _LearningRateHook(tf.train.SessionRunHook):
                  lr,
                  lr_val=0.001,
                  lr_minimal=1e-6,
-                 lr_curve=[[1., 10, 0]], # [[factor_0, epoch_0, updates_0], ... [factor_n, epoch_n, update_n]]
+                 lr_curve=[[1., 10, 0]], # [[op_0, factor_0, epoch_0, updates_0], ... [op_n, factor_n, epoch_n, update_n]]
                  global_step=None,
                  ep_size=None):
         self._lr = lr
@@ -96,7 +96,7 @@ class _LearningRateHook(tf.train.SessionRunHook):
 
     def begin(self):
         self._gs_start = 0
-        self._gs_window = self._ep_size * self._lr_curve[0][1]
+        self._gs_window = self._ep_size * self._lr_curve[0][2]
 
     def before_run(self, run_context):
         requests = {}
@@ -110,18 +110,27 @@ class _LearningRateHook(tf.train.SessionRunHook):
         gs_now = run_values.results["global_step"]
         if self._gs_window > 0 and (gs_now - self._gs_start) > self._gs_window:
             self._gs_start = gs_now
-            if self._lr_curve[0][2] != 0:
-                self._lr_val *= self._lr_curve[0][0]
-                set_lr_val(self._lr_val)
-                if self._lr_curve[0][2] > 0:
-                    self._lr_curve[0][2] -= 1
-            if self._lr_curve[0][2] == 0 and len(self._lr_curve) > 1:
-                self._lr_curve.pop(0)
-                self._gs_window = self._ep_size * self._lr_curve[0][1]
+            if self._lr_curve[0][3] != 0:
+                if self._lr_curve[0][0] == '*':
+                    self._lr_val *= self._lr_curve[0][1]
+                elif self._lr_curve[0][0] == '+':
+                    self._lr_val += self._lr_curve[0][1]
+                elif self._lr_curve[0][0] == '-':
+                    self._lr_val -= self._lr_curve[0][1]
+                elif self._lr_curve[0][0] == '/':
+                    self._lr_val /= self._lr_curve[0][1]
+                elif self._lr_curve[0][0] == '=':
+                    self._lr_val = self._lr_curve[0][1]
+                else:
+                    raise ValueError('The first element of lr curve segment must be (*,+,-,/=)')
 
-    def set_lr(self, lr):
-        self._lr_val = lr
-        set_lr_val(self._lr_val)
+                set_lr_val(self._lr_val)
+
+                if self._lr_curve[0][3] > 0:
+                    self._lr_curve[0][3] -= 1
+            if self._lr_curve[0][3] == 0 and len(self._lr_curve) > 1:
+                self._lr_curve.pop(0)
+                self._gs_window = self._ep_size * self._lr_curve[0][2]
 
 
 class _TimedSummaryHook(tf.train.SessionRunHook):
