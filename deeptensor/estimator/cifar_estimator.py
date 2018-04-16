@@ -17,8 +17,8 @@ class CifarEstimator(estimator.BaseEstimator):
     def build_data(self, is_training):
         args = self._opt.args
         with tf.name_scope('dataset'):
-            data = dt.data.Cifar10(batch_size=args.batch_size, valid_size=args.valid_size,
-                                   distorted=True, out_height=32, out_width=32).init_data()
+            data = dt.data.Cifar10TF(batch_size=args.batch_size, valid_size=args.valid_size,
+                                     distorted=True, out_height=32, out_width=32).init_data()
 
             ep_size = data.train.num_batch
             v_ep_size = data.valid.num_batch
