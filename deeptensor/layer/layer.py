@@ -38,6 +38,7 @@ def conv(tensor, opt):
                                       regularizer=opt.regularizer_func, summary=opt.summary)
     else:
         w = dt.initializer.variance_scaling('W', (size[0], size[1], opt.in_dim, opt.dim),
+                                            scale=2.0, mode='fan_out',
                                             regularizer=opt.regularizer_func, summary=opt.summary)
 
     b = dt.initializer.constant('b', opt.dim, summary=opt.summary) if opt.bias else 0
