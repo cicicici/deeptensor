@@ -44,7 +44,7 @@ def init_lr(opt):
                              .format(opt.lr_initial, opt.lr_minimal, opt.lr_curve))
 
     # add learning rate summary
-    opt.lr = _learning_rate * hvd.size()
+    opt.lr = _learning_rate #* hvd.size()
     tf.summary.scalar('learning_r', opt.lr)
 
 def optim(loss, **kwargs):
