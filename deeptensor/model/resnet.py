@@ -14,7 +14,7 @@ def get_dim_stride(group, block, base_dim):
         stride = 1
     return dim, stride
 
-def get_shortcut(group, block, x, out_dim, stride, identity):
+def get_shortcut(group, block, x, out_dim, stride, identity, bn=True):
     in_dim = dt.utils.get_dim(x)
     if in_dim == out_dim:
         if stride == 1:
@@ -30,7 +30,7 @@ def get_shortcut(group, block, x, out_dim, stride, identity):
                 shortcut = tf.pad(x, [[0, 0], [0, 0], [0, 0], [pad_dim, pad_dim]], name='sc_pad{}_{}'.format(group, block))
         else:
             shortcut = dt.layer.conv(x, size=(1, 1), dim=out_dim, stride=[stride, stride],
-                                     bn=False, ln=False, act=None, dout=0,
+                                     bn=bn, ln=False, act=None, dout=0,
                                      name='sc_conv{}_{}'.format(group, block))
     return shortcut
 
@@ -98,7 +98,7 @@ def resnet_v1(in_tensor, num_classes,
 
     # fc layers
     with dt.ctx(name='fcs', act='relu', bn=True, weight_filler=weight_filler,
-                regularizer=regularizer, weight_decay=fc_decay, bias=use_bias):
+                regularizer=regularizer, weight_decay=fc_decay, bias=True):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
         n = dt.transform.flatten(n)
         #n = dt.layer.dense(n, dim=256, name='fc1')
@@ -173,7 +173,7 @@ def resnet_v2(in_tensor, num_classes,
 
     # fc layers
     with dt.ctx(name='fcs', act='relu', bn=True, weight_filler=weight_filler,
-                regularizer=regularizer, weight_decay=fc_decay, bias=use_bias):
+                regularizer=regularizer, weight_decay=fc_decay, bias=True):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
         n = dt.transform.flatten(n)
         #n = dt.layer.dense(n, dim=256, name='fc1')
