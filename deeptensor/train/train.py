@@ -66,7 +66,7 @@ def optim(loss, **kwargs):
     elif opt.optim == 'RMSProp':
         optimizer = tf.train.RMSPropOptimizer(opt.lr, decay=opt.beta1, momentum=opt.momentum)
     elif opt.optim == 'Momentum':
-        optimizer = tf.train.MomentumOptimizer(opt.lr, opt.momentum)
+        optimizer = tf.train.MomentumOptimizer(opt.lr, opt.momentum, use_nesterov=True)
     else:
         optimizer = tf.train.GradientDescentOptimizer(opt.lr)
 
