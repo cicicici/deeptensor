@@ -22,11 +22,11 @@ _NUM_VALID_FILES = 128
 def get_filenames(is_training, data_dir):
     if is_training:
         return [
-            os.path.join(data_dir, 'train-%05d-of-01024' % (i+1))
+            os.path.join(data_dir, 'train-%05d-of-01024' % (i))
             for i in range(_NUM_TRAIN_FILES)]
     else:
         return [
-            os.path.join(data_dir, 'validation-%05d-of-00128' % (i+1))
+            os.path.join(data_dir, 'validation-%05d-of-00128' % (i))
             for i in range(_NUM_VALID_FILES)]
 
 def _distort_image(image, label, is_training):
@@ -56,7 +56,7 @@ class ImageNet(object):
         self._class_min = class_min
 
     def tfrecord_data(self, is_training, shuffle=False):
-        filenames = get_filenames(is_training, '{}/train-val-tfrecord-480'.format(self._data_dir))
+        filenames = get_filenames(is_training, '{}'.format(self._data_dir))
         if is_training:
             num_images = _NUM_IMAGES['train']
             b_size = self._batch_size
