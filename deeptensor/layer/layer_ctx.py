@@ -124,7 +124,7 @@ def dec_layer_func(func):
 
                 if opt.is_training:
                     # add running mean, variance to UPDATE_OP collection
-                    decay = 0.99
+                    decay = 0.9
                     tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, mean_running.assign(mean_running * decay + mean * (1 - decay)))
                     tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, variance_running.assign(variance_running * decay + variance * (1 - decay)))
 
