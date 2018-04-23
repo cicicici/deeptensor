@@ -41,7 +41,7 @@ def resnet_v1_basic_block(n, group, block, base_dim, identity):
 
         n = dt.layer.conv(n, layer_first=True, shortcut=None,
                           size=(3, 3), dim=dim, stride=[stride, stride], name='res{}_{}_0'.format(group, block))
-        n = dt.layer.conv(n, layer_first=True, shortcut=shortcut,
+        n = dt.layer.conv(n, layer_first=True, shortcut=shortcut, bn_gamma=0,
                           size=(3, 3), dim=dim, stride=[1, 1], name='res{}_{}_1'.format(group, block))
     return n
 
@@ -55,7 +55,7 @@ def resnet_v1_bottleneck_block(n, group, block, base_dim, identity, stride_first
                           size=(1, 1), dim=dim, stride=[stride, stride] if stride_first else [1, 1], name='res{}_{}_0'.format(group, block))
         n = dt.layer.conv(n, layer_first=True, shortcut=None,
                           size=(3, 3), dim=dim, stride=[1, 1] if stride_first else [stride, stride], name='res{}_{}_1'.format(group, block))
-        n = dt.layer.conv(n, layer_first=True, shortcut=shortcut,
+        n = dt.layer.conv(n, layer_first=True, shortcut=shortcut, bn_gamma=0,
                           size=(1, 1), dim=out_dim, stride=[1, 1], name='res{}_{}_2'.format(group, block))
     return n
 
