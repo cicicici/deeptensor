@@ -32,7 +32,7 @@ def dec_layer_func(func):
                           bn=False, ln=False, dout=0,
                           regularizer=None, weight_decay=1e-6,
                           summary=True, scale=True,
-                          weight_filler="he")
+                          weight_filler="he", bn_gamma=1.0, ln_gamma=1.0)
 
             if opt.regularizer == 'l1':
                 opt.regularizer_func = lambda x: tf.reduce_mean(tf.abs(x))
@@ -72,8 +72,8 @@ def dec_layer_func(func):
             else:
                 opt.name += '_%d' % (max([int(n.split('_')[-1]) for n in exist_layers]) + 1)
 
-        dt.debug(dt.DC.NET, "[LAYER] {}, T {}, R {}, shape {}, bn {}, ln {}, scale {}, regularizer {}, weight_decay {}, act {}, dout {}, first {}, shortcut {}"
-                                 .format(opt.name, opt.is_training, opt.reuse, opt.shape, opt.bn, opt.ln, opt.scale, opt.regularizer, opt.weight_decay, opt.act, opt.dout, opt.layer_first, (opt.shortcut is not None)))
+        dt.debug(dt.DC.NET, "[LAYER] {}, T {}, R {}, shape {}, bn {}, ln {}, scale {}, regularizer {}, weight_decay {}, act {}, dout {}, first {}, shortcut {}, bn_gamma {}, ln_gamma {}"
+                                 .format(opt.name, opt.is_training, opt.reuse, opt.shape, opt.bn, opt.ln, opt.scale, opt.regularizer, opt.weight_decay, opt.act, opt.dout, opt.layer_first, (opt.shortcut is not None), opt.bn_gamma, opt.ln_gamma))
 
         with tf.variable_scope(opt.name, reuse=opt.reuse) as scope:
 
@@ -88,7 +88,7 @@ def dec_layer_func(func):
             # apply batch normalization
             if opt.bn:
                 beta = dt.initializer.constant('beta', out_dim, summary=opt.summary)
-                gamma = dt.initializer.constant('gamma', out_dim, value=1, summary=opt.summary, trainable=opt.scale)
+                gamma = dt.initializer.constant('gamma', out_dim, value=opt.bn_gamma, summary=opt.summary, trainable=opt.scale)
 
                 # offset, scale parameter for inference
                 mean_running = dt.initializer.constant('mean_run', out_dim, trainable=False, summary=opt.summary)
@@ -133,7 +133,7 @@ def dec_layer_func(func):
                 # offset, scale parameter
                 beta = dt.initializer.constant('beta', out_dim, summary=opt.summary)
                 if opt.scale:
-                    gamma = dt.initializer.constant('gamma', out_dim, value=1, summary=opt.summary)
+                    gamma = dt.initializer.constant('gamma', out_dim, value=opt.ln_gamma, summary=opt.summary)
 
                 # calc layer mean, variance for final axis
                 mean, variance = tf.nn.moments(out, axes=[len(out.get_shape()) - 1], keep_dims=True)
