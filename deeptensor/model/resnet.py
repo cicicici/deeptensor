@@ -45,16 +45,16 @@ def resnet_v1_basic_block(n, group, block, base_dim, identity):
                           size=(3, 3), dim=dim, stride=[1, 1], name='res{}_{}_1'.format(group, block))
     return n
 
-def resnet_v1_bottleneck_block(n, group, block, base_dim, identity):
+def resnet_v1_bottleneck_block(n, group, block, base_dim, identity, stride_first=False):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
         out_dim = dim * 4
         shortcut = get_shortcut(group, block, n, out_dim, stride, identity)
 
         n = dt.layer.conv(n, layer_first=True, shortcut=None,
-                          size=(1, 1), dim=dim, stride=[stride, stride], name='res{}_{}_0'.format(group, block))
+                          size=(1, 1), dim=dim, stride=[stride, stride] if stride_first else [1, 1], name='res{}_{}_0'.format(group, block))
         n = dt.layer.conv(n, layer_first=True, shortcut=None,
-                          size=(3, 3), dim=dim, stride=[1, 1], name='res{}_{}_1'.format(group, block))
+                          size=(3, 3), dim=dim, stride=[1, 1] if stride_first else [stride, stride], name='res{}_{}_1'.format(group, block))
         n = dt.layer.conv(n, layer_first=True, shortcut=shortcut,
                           size=(1, 1), dim=out_dim, stride=[1, 1], name='res{}_{}_2'.format(group, block))
     return n
@@ -117,16 +117,16 @@ def resnet_v2_basic_block(n, group, block, base_dim, identity):
                           size=(3, 3), dim=dim, stride=[1, 1], name='res{}_{}_1'.format(group, block))
     return n
 
-def resnet_v2_bottleneck_block(n, group, block, base_dim, identity):
+def resnet_v2_bottleneck_block(n, group, block, base_dim, identity, stride_first=False):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
         out_dim = dim * 4
         shortcut = get_shortcut(group, block, n, out_dim, stride, identity)
 
         n = dt.layer.conv(n, layer_first=False, shortcut=None,
-                          size=(1, 1), dim=dim, stride=[stride, stride], name='res{}_{}_0'.format(group, block))
+                          size=(1, 1), dim=dim, stride=[stride, stride] if stride_first else [1, 1], name='res{}_{}_0'.format(group, block))
         n = dt.layer.conv(n, layer_first=False, shortcut=None,
-                          size=(3, 3), dim=dim, stride=[1, 1], name='res{}_{}_1'.format(group, block))
+                          size=(3, 3), dim=dim, stride=[1, 1] if stride_first else [stride, stride], name='res{}_{}_1'.format(group, block))
         n = dt.layer.conv(n, layer_first=False, shortcut=shortcut,
                           size=(1, 1), dim=out_dim, stride=[1, 1], name='res{}_{}_2'.format(group, block))
     return n
