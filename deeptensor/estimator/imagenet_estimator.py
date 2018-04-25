@@ -77,7 +77,9 @@ class ImageNetEstimator(estimator.BaseEstimator):
             with tf.name_scope('valid'):
                 vx = self._opt.data.vx
                 vy = self._opt.data.vy
-                logits_val = self.forward(vx, False, reuse=True)
+                # May not need this ctx line
+                with dt.ctx(is_training=False, reuse=True, summary=False):
+                    logits_val = self.forward(vx, False, reuse=True)
                 loss_val = dt.loss.ce(logits_val, target=vy, softmax=False)
                 soft_val = dt.activation.softmax(logits_val)
                 acc1_val = tf.reduce_mean(dt.metric.accuracy(soft_val, target=vy), name='acc1')
