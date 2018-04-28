@@ -16,12 +16,12 @@ def tensor_short_name(tensor):
 
 def _scalar(name, tensor, skip_reuse=False):
     if skip_reuse or (not tf.get_variable_scope().reuse and not dt.get_ctx().reuse):
-        val = gen_logging_ops._scalar_summary(name, tensor)
+        val = gen_logging_ops.scalar_summary(name, tensor)
         tf.add_to_collection(tf.GraphKeys.SUMMARIES, val)
 
 def _histogram(name, tensor, skip_reuse=False):
     if skip_reuse or (not tf.get_variable_scope().reuse and not dt.get_ctx().reuse):
-        val = gen_logging_ops._histogram_summary(name, tensor)
+        val = gen_logging_ops.histogram_summary(name, tensor)
         tf.add_to_collection(tf.GraphKeys.SUMMARIES, val)
 
 def summary_loss(tensor, prefix='losses', name=None):
