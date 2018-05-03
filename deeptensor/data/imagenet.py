@@ -65,7 +65,7 @@ class ImageNet(object):
             b_size = self._valid_size
 
         tfrecord = dt.data.ImageTFRecord(filenames, num_images, self._class_num, _DEFAULT_IMAGE_SIZE, _DEFAULT_IMAGE_SIZE, _NUM_CHANNELS,
-                                         batch_size=b_size, shuffle=shuffle, shuffle_size=self._shuffle_size, epochs=10000, shard=(self._shard and is_training),
+                                         batch_size=b_size, shuffle=shuffle, shuffle_size=self._shuffle_size, epochs=10000, shard=self._shard,
                                          is_training=is_training, distorted=self._distorted, one_hot=False, preproc_threads=self._preproc_threads).init_data()
         dt.debug(dt.DC.DATA, 'TFRecord: training {}, images {}, batches {}, batch_size {}'
                                  .format(is_training, tfrecord._num_images, tfrecord._num_batch, b_size))

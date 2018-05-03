@@ -80,7 +80,7 @@ class Cifar10TF(object):
         filenames = self.get_filenames(subset)
         dataset = tf.data.TFRecordDataset(filenames)
 
-        if subset == 'train' and self._shard:
+        if self._shard:
             dataset = dataset.shard(hvd.size(), hvd.rank())
 
         # Repeat infinitely.
@@ -127,6 +127,7 @@ class Cifar10TF(object):
 
         if self._shard:
             self.train.num_batch = self.train.num_batch // hvd.size()
+            self.valid.num_batch = self.valid.num_batch // hvd.size()
 
         return self
 

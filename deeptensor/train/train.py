@@ -47,6 +47,9 @@ def init_lr(opt):
     opt.lr = _learning_rate #* hvd.size()
     tf.summary.scalar('learning_r', opt.lr)
 
+def is_chief():
+    return hvd.rank() == 0
+
 def optim(loss, **kwargs):
     opt = dt.Opt(kwargs)
 
@@ -316,20 +319,6 @@ def build_train_hooks(opt):
                                              task_fn=batch_log,
                                              task_ops={'lr': opt.lr, 'loss': opt.loss_0, 'acc': opt.acc_0})
 
-    train_hooks = []
-
-    last_step = opt.max_ep * opt.data.ep_size
-    train_hooks.append(tf.train.StopAtStepHook(num_steps=None, last_step=last_step))
-
-    #train_hooks.append(tf.train.NanTensorHook(loss))
-    train_hooks.append(learning_rate_hook)
-    train_hooks.append(summary_hook)
-    train_hooks.append(timed_summary_hook)
-    train_hooks.append(batch_log_task_hook)
-
-    return train_hooks
-
-def build_chief_train_hooks(opt):
     # metric logging function
     def metric_log(context_, values_, opt_, time_, steps_):
         cur_step = values_.results["global_step"]
@@ -365,14 +354,25 @@ def build_chief_train_hooks(opt):
                                                              simple_value=m_vals[k])])
                     opt_.summary_writer.add_summary(m_summary, cur_step)
 
-        dt.info(dt.DC.TRAIN, '\t%s Epoch[%03d:lr=%.6f:gs=%d] loss %s, acc %s,%s %.3f img/s' %
-                (time.strftime("%H:%M:%S", time.gmtime(cur_time - opt.train_start)),
-                 cur_ep, cur_lr, cur_step,
-                 ('NA' if opt_.stats.avg_loss is None else '%8.6f' % opt_.stats.avg_loss),
-                 ('NA' if opt_.stats.avg_acc is None else '%8.6f' % opt_.stats.avg_acc),
-                 metric_info,
-                 float(opt_.batch_size * steps_) / (time_)))
+        if is_chief():
+            dt.info(dt.DC.TRAIN, '\t%s Epoch[%03d:lr=%.6f:gs=%d] loss %s, acc %s,%s %.3f img/s' %
+                    (time.strftime("%H:%M:%S", time.gmtime(cur_time - opt.train_start)),
+                     cur_ep, cur_lr, cur_step,
+                     ('NA' if opt_.stats.avg_loss is None else '%8.6f' % opt_.stats.avg_loss),
+                     ('NA' if opt_.stats.avg_acc is None else '%8.6f' % opt_.stats.avg_acc),
+                     metric_info,
+                     float(opt_.batch_size * steps_) / (time_)))
 
+    def distribute_valid_metric(metric):
+        for i, m in enumerate(metric):
+            r_ops = []
+            with dt.ctx(name=m.name+"_dist"):
+                for op in m.ops:
+                    op_name = dt.tensor_short_name(op)
+                    r_ops.append(tf.identity(hvd.allreduce(op, average=True), name=op_name))
+            m.ops = r_ops
+
+    distribute_valid_metric(opt.valid_metric)
     metric_log_task_hook = _ScheduledTaskHook(every_n_steps=opt.data.ep_size,
                                               every_n_secs=None,
                                               global_step=dt.train.global_step(),
@@ -383,6 +383,20 @@ def build_chief_train_hooks(opt):
 
     train_hooks = []
     train_hooks.append(metric_log_task_hook)
+
+    last_step = opt.max_ep * opt.data.ep_size
+    train_hooks.append(tf.train.StopAtStepHook(num_steps=None, last_step=last_step))
+    #train_hooks.append(tf.train.NanTensorHook(loss))
+
+    train_hooks.append(learning_rate_hook)
+    train_hooks.append(summary_hook)
+    train_hooks.append(timed_summary_hook)
+    train_hooks.append(batch_log_task_hook)
+
+    return train_hooks
+
+def build_chief_train_hooks(opt):
+    train_hooks = []
     return train_hooks
 
 def train(**kwargs):
