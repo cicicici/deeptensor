@@ -240,6 +240,11 @@ def init_summary(opt):
     opt.log_dir = opt.model_dir + '/run-%02d%02d-%02d%02d' % tuple(time.localtime(time.time()))[1:5]
     opt.summary_writer = tf.summary.FileWriter(opt.log_dir)
 
+def _close_tqdm(opt):
+    if opt.tqdm is not None:
+        opt.tqdm.close()
+        opt.tqdm = None
+
 def build_train_hooks(opt):
     learning_rate_hook = _LearningRateHook(opt.lr,
                                            lr_val=get_lr_val(),
@@ -305,8 +310,7 @@ def build_train_hooks(opt):
         if opt_.tqdm is None:
             opt_.tqdm = tqdm(total=opt_.data.ep_size, initial=cur_ep_step, desc='train', ncols=80, unit='b', leave=False)
         if cur_ep_step == opt_.data.ep_size - 1:
-            opt_.tqdm.close()
-            opt_.tqdm = None
+            _close_tqdm(opt_)
         else:
             opt_.tqdm.update(1)
 
@@ -334,6 +338,8 @@ def build_train_hooks(opt):
                 m_vals = [0 for op in m.ops]
                 m_names = [dt.tensor_short_name(op) for op in m.ops]
 
+                _close_tqdm(opt_)
+                opt_.tqdm = tqdm(total=m.cnt, initial=0, desc=m.name, ncols=80, unit='b', leave=False)
                 for j in range(0, m.cnt):
                     vals = context_.session.run(m.ops)
                     vals = [round(float(v), dt.precision) for v in vals]
@@ -347,6 +353,9 @@ def build_train_hooks(opt):
                                        idx=int(j),
                                        vals=vals,
                                        ts=dt.util.get_ts()))
+                    opt_.tqdm.update(1)
+                _close_tqdm(opt_)
+
                 for k in range(0, len(m.ops)):
                     m_vals[k] = m_vals[k] / m.cnt
                     metric_info += " {}/{} {:.6f},".format(m.name, m_names[k], m_vals[k])
