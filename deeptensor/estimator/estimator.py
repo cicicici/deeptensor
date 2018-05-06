@@ -175,12 +175,16 @@ class BaseEstimator(object):
         session_config.log_device_placement = False
         session_config.gpu_options.visible_device_list = str(hvd.local_rank())
 
+        save_checkpoints_secs = None
+        if dt.train.is_chief():
+            save_checkpoints_secs = self._opt.save_interval
+
         run_config = tf.estimator.RunConfig().replace(
                         model_dir=self._opt.model_dir,
                         tf_random_seed=self._opt.tf_random_seed,
                         save_summary_steps=0,
                         save_checkpoints_steps=None,
-                        save_checkpoints_secs=self._opt.save_interval,
+                        save_checkpoints_secs=save_checkpoints_secs,
                         session_config=session_config,
                         keep_checkpoint_max=self._opt.max_keep,
                         keep_checkpoint_every_n_hours=self._opt.keep_interval,
