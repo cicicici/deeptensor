@@ -15,8 +15,8 @@ def conv(tensor, opt):
 
     size = opt.size if isinstance(opt.size, (tuple, list)) else [opt.size, opt.size]
 
-    stride = dt.utils.get_stride(opt.stride)
-    padding = dt.utils.get_padding(opt.padding) if opt.padding else None
+    stride = dt.tensor.get_stride(opt.stride)
+    padding = dt.tensor.get_padding(opt.padding) if opt.padding else None
     if padding is not None:
         tensor_in = tf.pad(tensor,
                            paddings=tf.constant(padding, dtype=tf.int32),

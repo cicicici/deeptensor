@@ -8,11 +8,11 @@ __author__ = 'deeptensor'
 
 from .util import *
 from .debug import *
-
 from .context import *
 
 import deeptensor.util
 import deeptensor.debug
+import deeptensor.tensor
 
 import deeptensor.data
 import deeptensor.activation

@@ -15,7 +15,7 @@ def get_dim_stride(group, block, base_dim):
     return dim, stride
 
 def get_shortcut(group, block, x, out_dim, stride, identity, bn=True):
-    in_dim = dt.utils.get_dim(x)
+    in_dim = dt.tensor.get_dim(x)
     if in_dim == out_dim:
         if stride == 1:
             shortcut = x

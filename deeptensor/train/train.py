@@ -423,7 +423,7 @@ def train(**kwargs):
                   model_dir='asset/train', tf_random_seed=12345, op_random_seed=12345,
                   max_ep=100000, summary_freq=16, summary_steps=100,
                   save_interval=600, max_keep=5, keep_interval=1000,
-                  valid_metric=[], validate_ep=0,
+                  valid_metric=[], validate_ep=0, data_format=dt.dformat.DEFAULT,
                   tqdm=None)
 
     # stats

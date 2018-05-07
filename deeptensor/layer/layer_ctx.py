@@ -83,7 +83,7 @@ def dec_layer_func(func):
             else:
                 out = tensor
             out_shape = out.get_shape()
-            out_dim = dt.utils.get_dim(out)
+            out_dim = dt.tensor.get_dim(out)
 
             # apply batch normalization
             if opt.bn:
