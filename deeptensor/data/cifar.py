@@ -25,6 +25,8 @@ class Cifar10(object):
     TRAIN_NUM_PER_EPOCH = 50000
     EVAL_NUM_PER_EPOCH = 10000
 
+    DATA_FORMAT = dt.dformat.NHWC
+
     def maybe_download_and_extract(self):
         dest_directory = self._data_dir
         if not os.path.exists(dest_directory):
@@ -85,8 +87,6 @@ class Cifar10(object):
               batch_size=batch_size,
               num_threads=num_preprocess_threads,
               capacity=min_queue_examples + 3 * batch_size)
-
-        #tf.summary.image('batch-images', images)
 
         # RANK ADJ
         #return images, tf.reshape(labels, [batch_size])
@@ -156,10 +156,12 @@ class Cifar10(object):
             images = tf.cast(images, tf.float16)
             labels = tf.cast(labels, tf.float16)
 
+        images = dt.dformat_chk_conv_images(images, Cifar10.DATA_FORMAT, self._data_format)
+
         return images, labels
 
     def __init__(self, batch_size=128, valid_size=128, reshape=False, one_hot=False, distorted=False,
-                 out_height=IMAGE_SIZE, out_width=IMAGE_SIZE):
+                 out_height=IMAGE_SIZE, out_width=IMAGE_SIZE, data_format=dt.dformat.DEFAULT):
 
         self._data_dir = './_asset/data/cifar10'
         self._data_url = 'http://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz'
@@ -171,6 +173,7 @@ class Cifar10(object):
         self._distorted = distorted
         self._out_height = out_height
         self._out_width = out_width
+        self._data_format = data_format
 
     def init_data(self):
         self.train, self.valid = dt.Opt(), dt.Opt()

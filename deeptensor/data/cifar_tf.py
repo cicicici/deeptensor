@@ -23,10 +23,12 @@ class Cifar10TF(object):
     TRAIN_NUM_PER_EPOCH = 50000
     EVAL_NUM_PER_EPOCH = 10000
 
+    DATA_FORMAT = dt.dformat.NHWC
+
     def __init__(self, data_dir='_asset/data/cifar10',
                  batch_size=128, valid_size=128, distorted=False,
                  out_height=IMAGE_HEIGHT, out_width=IMAGE_WIDTH,
-                 preproc_threads=4, shard=True):
+                 preproc_threads=4, shard=True, data_format=dt.dformat.DEFAULT):
         self._data_dir = data_dir
 
         self._batch_size = batch_size
@@ -36,6 +38,7 @@ class Cifar10TF(object):
         self._out_width = out_width
         self._preproc_threads = preproc_threads
         self._shard = shard
+        self._data_format = data_format
 
     def get_filenames(self, subset):
         if subset in ['train', 'validation']:
@@ -116,6 +119,8 @@ class Cifar10TF(object):
             batch_size = self._valid_size
 
         images, labels = self.make_batch(subset, batch_size, distorted=distorted)
+
+        images = dt.dformat_chk_conv_images(images, Cifar10TF.DATA_FORMAT, self._data_format)
 
         return images, labels
 

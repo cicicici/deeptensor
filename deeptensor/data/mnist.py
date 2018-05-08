@@ -23,7 +23,7 @@ def _data_to_tensor_single(data_list, batch_size, name=None):
                                   min_after_dequeue = batch_size * _cap_min * _cap_thread,
                                   name = name, num_threads = _num_thread)
 
-def _data_to_tensor(data_list, batch_size, name=None):
+def _data_to_tensor(data_list, batch_size, in_fmt, out_fmt, name=None):
     _num_thread = 4
     _cap_thread = _num_thread
     _cap_max = 128
@@ -37,7 +37,7 @@ def _data_to_tensor(data_list, batch_size, name=None):
                                             name = name, num_threads = _num_thread,
                                             enqueue_many=True)
 
-    tf.summary.image('batch-images', images)
+    images = dt.dformat_chk_conv_images(images, in_fmt, out_fmt)
 
     return images, labels
 
@@ -53,12 +53,15 @@ class Mnist(object):
     TRAIN_NUM_PER_EPOCH = 50000
     EVAL_NUM_PER_EPOCH = 10000
 
-    def __init__(self, batch_size=128, valid_size=128, reshape=False, one_hot=False):
+    DATA_FORMAT = dt.dformat.NHWC
+
+    def __init__(self, batch_size=128, valid_size=128, reshape=False, one_hot=False, data_format=dt.dformat.DEFAULT):
         self._data_dir = Mnist._data_dir
         self._batch_size = batch_size
         self._valid_size = valid_size
         self._reshape = reshape
         self._one_hot = one_hot
+        self._data_format = data_format
 
     def init_data(self):
         self.train, self.valid, self.test = dt.Opt(), dt.Opt, dt.Opt()
@@ -76,9 +79,9 @@ class Mnist(object):
         self._test_raw = self._data_set.test
 
         self.train.images, self.train.labels = \
-            _data_to_tensor([self._train_raw.images, self._train_raw.labels.astype('int32')], self._batch_size, name='train')
+            _data_to_tensor([self._train_raw.images, self._train_raw.labels.astype('int32')], self._batch_size, Mnist.DATA_FORMAT, self._data_format, name='train')
         self.valid.images, self.valid.labels = \
-            _data_to_tensor([self._valid_raw.images, self._valid_raw.labels.astype('int32')], self._valid_size, name='valid')
+            _data_to_tensor([self._valid_raw.images, self._valid_raw.labels.astype('int32')], self._valid_size, Mnist.DATA_FORMAT, self._data_format, name='valid')
 
         return self
 

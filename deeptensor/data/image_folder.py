@@ -13,11 +13,10 @@ import tensorflow as tf
 
 class ImageFolder(object):
 
-    _data_dir = './asset/images'
-
     def __init__(self, data_dir, idx_file, subdir=None, batch_size=128, preproc_threads=4, splits=1,
                  shuffle=True, shuffle_size=0, distorted=True, class_num=2, class_min=0,
-                 distort_image_fn=None, random_seed=12345):
+                 distort_image_fn=None, random_seed=12345,
+                 data_format=dt.dformat.DEFAULT, src_data_format=dt.dformat.NHWC):
         self._data_dir = data_dir
         self._idx_file = idx_file
         self._subdir = subdir
@@ -37,6 +36,8 @@ class ImageFolder(object):
             self._distort_image_fn = distort_image_fn
 
         self._random_seed = random_seed
+        self._data_format = data_format
+        self._src_data_format = src_data_format
 
         self._num_examples_per_epoch = 0
         self._num_batches_per_epoch = 0
@@ -139,6 +140,9 @@ class ImageFolder(object):
 
         return self
 
+    def convert_format(self):
+        self._images_batch = dt.dformat_chk_conv_images(self._images_batch, self._src_data_format, self._data_format)
+
     def split(self):
         if self._splits > 1:
             self._images_splits = tf.split(axis=0, num_or_size_splits=self._splits, value=self._images_batch)
@@ -159,6 +163,7 @@ class ImageFolder(object):
         if self._distorted:
             self.distort_image()
         self.batch_repeat()
+        self.convert_format()
         self.split()
 
         return self

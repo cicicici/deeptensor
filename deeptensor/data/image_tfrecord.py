@@ -12,7 +12,8 @@ class ImageTFRecord(object):
     def __init__(self, filenames, num_images, num_classes, out_height, out_width, channels,
                  batch_size=32, shuffle=True, shuffle_size=0, epochs=10000, shard=True,
                  is_training=True, distorted=True, one_hot=False,
-                 preproc_threads=4, record_prefetch_factor=4, batch_prefetch_factor=0.5):
+                 preproc_threads=4, record_prefetch_factor=4, batch_prefetch_factor=0.5,
+                 data_format=dt.dformat.DEFAULT, src_data_format=dt.dformat.NHWC):
 
         self._filenames = filenames
         self._num_files = len(filenames)
@@ -38,6 +39,9 @@ class ImageTFRecord(object):
         self._preproc_threads = preproc_threads
         self._record_prefetch_factor = record_prefetch_factor
         self._batch_prefetch_factor = batch_prefetch_factor
+
+        self._data_format = data_format
+        self._src_data_format = src_data_format
 
     def _parse_example_proto(self, example_serialized):
         """Parses an Example proto containing a training example of an image.
@@ -164,6 +168,8 @@ class ImageTFRecord(object):
 
         dataset_iterator = dataset.make_one_shot_iterator()
         self._images_batch, self._labels_batch = dataset_iterator.get_next()
+
+        self._images_batch = dt.dformat_chk_conv_images(self._images_batch, self._src_data_format, self._data_format)
 
         return self
 

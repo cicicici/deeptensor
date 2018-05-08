@@ -19,11 +19,13 @@ class ImageNetEstimator(estimator.BaseEstimator):
         with tf.name_scope('dataset'):
             if args.dataset == 'cifar10':
                 data = dt.data.Cifar10(batch_size=args.batch_size, valid_size=args.valid_size,
-                                       distorted=True, out_height=224, out_width=224).init_data()
+                                       distorted=True, out_height=224, out_width=224,
+                                       data_format=self._opt.data_format).init_data()
             else:
                 data = dt.data.ImageNet(args.data_dir, data_type=args.data_type, batch_size=args.batch_size, valid_size=args.valid_size,
                                         shuffle_size=args.shuffle_size, distorted=True, shard=args.shard, preproc_threads=8,
-                                        class_num=args.class_num, class_min=args.class_min).init_data()
+                                        class_num=args.class_num, class_min=args.class_min,
+                                        data_format=self._opt.data_format).init_data()
 
             ep_size = data.train.num_batch
             v_ep_size = data.valid.num_batch

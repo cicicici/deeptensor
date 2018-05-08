@@ -40,7 +40,7 @@ class ImageNet(object):
     _data_dir = './_asset/imagenet'
 
     def __init__(self, data_dir, data_type='tfrecord', batch_size=32, valid_size=100, preproc_threads=4, splits=1,
-                 shuffle=True, shuffle_size=0, shard=True, distorted=True, class_num=1000, class_min=0):
+                 shuffle=True, shuffle_size=0, shard=True, distorted=True, class_num=1000, class_min=0, data_format=dt.dformat.DEFAULT):
         self._data_dir = data_dir
         self._data_type = data_type
         self._batch_size = batch_size
@@ -55,6 +55,8 @@ class ImageNet(object):
         self._class_num = class_num
         self._class_min = class_min
 
+        self._data_format = data_format
+
     def tfrecord_data(self, is_training, shuffle=False):
         filenames = get_filenames(is_training, '{}'.format(self._data_dir))
         if is_training:
@@ -66,7 +68,8 @@ class ImageNet(object):
 
         tfrecord = dt.data.ImageTFRecord(filenames, num_images, self._class_num, _DEFAULT_IMAGE_SIZE, _DEFAULT_IMAGE_SIZE, _NUM_CHANNELS,
                                          batch_size=b_size, shuffle=shuffle, shuffle_size=self._shuffle_size, epochs=10000, shard=self._shard,
-                                         is_training=is_training, distorted=self._distorted, one_hot=False, preproc_threads=self._preproc_threads).init_data()
+                                         is_training=is_training, distorted=self._distorted, one_hot=False, preproc_threads=self._preproc_threads,
+                                         data_format=self._data_format).init_data()
         dt.debug(dt.DC.DATA, 'TFRecord: training {}, images {}, batches {}, batch_size {}'
                                  .format(is_training, tfrecord._num_images, tfrecord._num_batch, b_size))
 
@@ -96,7 +99,8 @@ class ImageNet(object):
                                      distorted=self._distorted,
                                      class_num=self._class_num,
                                      class_min=self._class_min,
-                                     distort_image_fn=lambda i, l: _distort_image(i, l, is_training)).init_data()
+                                     distort_image_fn=lambda i, l: _distort_image(i, l, is_training),
+                                     data_format=self._data_format).init_data()
         dt.debug(dt.DC.DATA, 'Folder: training {}, images {}, batches {}, batch_size {}'
                                  .format(is_training, folder._num_examples_per_epoch, folder._num_batches_per_epoch, b_size))
 
