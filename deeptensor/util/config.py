@@ -58,6 +58,7 @@ class Config(object):
             self.args_parser.add_argument('--batch_size', type=int, help='Batch size')
             self.args_parser.add_argument('--valid_size', type=int, help='Valid size')
             self.args_parser.add_argument('--shard', type=str, help='Enable sharding for multi-gpu (true/false)')
+            self.args_parser.add_argument('--data_format', type=str, help='Data format (NHWC/NCHW)')
             self.args_parser.add_argument('--model_name', type=str, help='Model name (resnet)')
             self.args_parser.add_argument('--model_type', type=str, help='Model type (v1/v2)')
             self.args_parser.add_argument('--block_type', type=str, help='Block type (basic/bottleneck)')
@@ -107,6 +108,7 @@ class Config(object):
             self._default_config[section]['batch_size'] = 32
             self._default_config[section]['valid_size'] = 250
             self._default_config[section]['shard'] = True
+            self._default_config[section]['data_format'] = "NHWC"
             self._default_config[section]['model_name'] = "resnet"
             self._default_config[section]['model_type'] = "v2"
             self._default_config[section]['block_type'] = "bottleneck"

@@ -14,8 +14,8 @@ def get_dim_stride(group, block, base_dim):
         stride = 1
     return dim, stride
 
-def get_shortcut(group, block, x, out_dim, stride, identity, bn=True):
-    in_dim = dt.tensor.get_dim(x)
+def get_shortcut(group, block, x, out_dim, stride, identity, data_format, bn=True):
+    in_dim = dt.tensor.get_dim(x, data_format=data_format)
     if in_dim == out_dim:
         if stride == 1:
             shortcut = x
@@ -27,17 +27,21 @@ def get_shortcut(group, block, x, out_dim, stride, identity, bn=True):
                 x = dt.transform.pool(x, size=(stride, stride), stride=[stride, stride], name='sc_pool{}_{}'.format(group, block), avg=True)
             if in_dim < out_dim:
                 pad_dim = (out_dim - in_dim) // 2
+
+            if data_format == dt.dformat.NHWC:
                 shortcut = tf.pad(x, [[0, 0], [0, 0], [0, 0], [pad_dim, pad_dim]], name='sc_pad{}_{}'.format(group, block))
+            elif data_format == dt.dformat.NCHW:
+                shortcut = tf.pad(x, [[0, 0], [pad_dim, pad_dim], [0, 0], [0, 0]], name='sc_pad{}_{}'.format(group, block))
         else:
             shortcut = dt.layer.conv(x, size=(1, 1), dim=out_dim, stride=[stride, stride],
                                      bn=bn, ln=False, act=None, dout=0,
                                      name='sc_conv{}_{}'.format(group, block))
     return shortcut
 
-def resnet_v1_basic_block(n, group, block, base_dim, identity):
+def resnet_v1_basic_block(n, group, block, base_dim, identity, data_format):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
-        shortcut = get_shortcut(group, block, n, dim, stride, identity)
+        shortcut = get_shortcut(group, block, n, dim, stride, identity, data_format)
 
         n = dt.layer.conv(n, layer_first=True, shortcut=None,
                           size=(3, 3), dim=dim, stride=[stride, stride], name='res{}_{}_0'.format(group, block))
@@ -45,11 +49,11 @@ def resnet_v1_basic_block(n, group, block, base_dim, identity):
                           size=(3, 3), dim=dim, stride=[1, 1], name='res{}_{}_1'.format(group, block))
     return n
 
-def resnet_v1_bottleneck_block(n, group, block, base_dim, identity, stride_first=False):
+def resnet_v1_bottleneck_block(n, group, block, base_dim, identity, data_format, stride_first=False):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
         out_dim = dim * 4
-        shortcut = get_shortcut(group, block, n, out_dim, stride, identity)
+        shortcut = get_shortcut(group, block, n, out_dim, stride, identity, data_format)
 
         n = dt.layer.conv(n, layer_first=True, shortcut=None,
                           size=(1, 1), dim=dim, stride=[stride, stride] if stride_first else [1, 1], name='res{}_{}_0'.format(group, block))
@@ -65,7 +69,8 @@ def resnet_v1(in_tensor, num_classes,
               pool0_size=0, pool0_stride=2,
               base_dim=16,
               regularizer='l2', conv_decay=1e-4, fc_decay=1e-4,
-              shortcut='identity', weight_filler='variance', use_bias=False):
+              shortcut='identity', weight_filler='variance', use_bias=False,
+              data_format=dt.dformat.DEFAULT):
 
     block_layers = 2
     if block_type == 'bottleneck':
@@ -79,7 +84,7 @@ def resnet_v1(in_tensor, num_classes,
     # conv layers
     with dt.ctx(name='convs', act='relu', bn=True, weight_filler=weight_filler,
                 regularizer=regularizer, weight_decay=conv_decay, bias=use_bias,
-                pad='SAME', padding=None):
+                pad='SAME', padding=None, data_format=data_format):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
 
         n = dt.layer.conv(n, layer_first=True, shortcut=None,
@@ -90,15 +95,15 @@ def resnet_v1(in_tensor, num_classes,
         for group in range(len(blocks)):
             for block in range(blocks[group]):
                 if block_type == 'bottleneck':
-                    n = resnet_v1_bottleneck_block(n, group, block, base_dim, shortcut=='identity')
+                    n = resnet_v1_bottleneck_block(n, group, block, base_dim, shortcut=='identity', data_format)
                 else:
-                    n = resnet_v1_basic_block(n, group, block, base_dim, shortcut=='identity')
+                    n = resnet_v1_basic_block(n, group, block, base_dim, shortcut=='identity', data_format)
 
         n = dt.transform.pool(n, size=(8, 8), stride=[8, 8], name='pool1', avg=True)
 
     # fc layers
     with dt.ctx(name='fcs', act='relu', bn=True, weight_filler=weight_filler,
-                regularizer=regularizer, weight_decay=fc_decay, bias=True):
+                regularizer=regularizer, weight_decay=fc_decay, bias=True, data_format=data_format):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
         n = dt.transform.flatten(n)
         #n = dt.layer.dense(n, dim=256, name='fc1')
@@ -106,10 +111,10 @@ def resnet_v1(in_tensor, num_classes,
 
     return n
 
-def resnet_v2_basic_block(n, group, block, base_dim, identity):
+def resnet_v2_basic_block(n, group, block, base_dim, identity, data_format):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
-        shortcut = get_shortcut(group, block, n, dim, stride, identity)
+        shortcut = get_shortcut(group, block, n, dim, stride, identity, data_format)
 
         n = dt.layer.conv(n, layer_first=False, shortcut=None,
                           size=(3, 3), dim=dim, stride=[stride, stride], name='res{}_{}_0'.format(group, block))
@@ -117,11 +122,11 @@ def resnet_v2_basic_block(n, group, block, base_dim, identity):
                           size=(3, 3), dim=dim, stride=[1, 1], name='res{}_{}_1'.format(group, block))
     return n
 
-def resnet_v2_bottleneck_block(n, group, block, base_dim, identity, stride_first=False):
+def resnet_v2_bottleneck_block(n, group, block, base_dim, identity, data_format, stride_first=False):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
         out_dim = dim * 4
-        shortcut = get_shortcut(group, block, n, out_dim, stride, identity)
+        shortcut = get_shortcut(group, block, n, out_dim, stride, identity, data_format)
 
         n = dt.layer.conv(n, layer_first=False, shortcut=None,
                           size=(1, 1), dim=dim, stride=[stride, stride] if stride_first else [1, 1], name='res{}_{}_0'.format(group, block))
@@ -137,7 +142,8 @@ def resnet_v2(in_tensor, num_classes,
               pool0_size=0, pool0_stride=2,
               base_dim=16,
               regularizer='l2', conv_decay=1e-4, fc_decay=1e-4,
-              shortcut='identity', weight_filler='variance', use_bias=False):
+              shortcut='identity', weight_filler='variance', use_bias=False,
+              data_format=dt.dformat.DEFAULT):
 
     block_layers = 2
     if block_type == 'bottleneck':
@@ -151,7 +157,7 @@ def resnet_v2(in_tensor, num_classes,
     # conv layers
     with dt.ctx(name='convs', act='relu', bn=True, weight_filler=weight_filler,
                 regularizer=regularizer, weight_decay=conv_decay, bias=use_bias,
-                pad='SAME', padding=None):
+                pad='SAME', padding=None, data_format=data_format):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
 
         n = dt.layer.conv(n, layer_first=True, shortcut=None,
@@ -163,9 +169,9 @@ def resnet_v2(in_tensor, num_classes,
         for group in range(len(blocks)):
             for block in range(blocks[group]):
                 if block_type == 'bottleneck':
-                    n = resnet_v2_bottleneck_block(n, group, block, base_dim, shortcut=='identity')
+                    n = resnet_v2_bottleneck_block(n, group, block, base_dim, shortcut=='identity', data_format)
                 else:
-                    n = resnet_v2_basic_block(n, group, block, base_dim, shortcut=='identity')
+                    n = resnet_v2_basic_block(n, group, block, base_dim, shortcut=='identity', data_format)
 
         # apply bn, relu
         n = dt.layer.bypass(n, name='bypass0')
@@ -173,7 +179,7 @@ def resnet_v2(in_tensor, num_classes,
 
     # fc layers
     with dt.ctx(name='fcs', act='relu', bn=True, weight_filler=weight_filler,
-                regularizer=regularizer, weight_decay=fc_decay, bias=True):
+                regularizer=regularizer, weight_decay=fc_decay, bias=True, data_format=data_format):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
         n = dt.transform.flatten(n)
         #n = dt.layer.dense(n, dim=256, name='fc1')

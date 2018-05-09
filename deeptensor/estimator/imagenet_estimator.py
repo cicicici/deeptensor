@@ -52,20 +52,22 @@ class ImageNetEstimator(estimator.BaseEstimator):
     def forward(self, tensor, is_training, reuse=False):
         args = self._opt.args
 
-        dt.summary_image(tensor)
+        #dt.summary_image(tensor)
         if args.model_name == "resnet":
             if args.model_type == "v1":
                 logits = dt.model.resnet_v1(tensor, args.class_num, block_type=args.block_type, blocks=args.blocks,
                                             conv0_size=7, conv0_stride=2,
                                             pool0_size=3, pool0_stride=2,
                                             base_dim=64, shortcut=args.shortcut,
-                                            regularizer=args.regularizer, conv_decay=args.conv_decay, fc_decay=args.fc_decay)
+                                            regularizer=args.regularizer, conv_decay=args.conv_decay, fc_decay=args.fc_decay,
+                                            data_format=self._opt.data_format)
             elif args.model_type == "v2":
                 logits = dt.model.resnet_v2(tensor, args.class_num, block_type=args.block_type, blocks=args.blocks,
                                             conv0_size=7, conv0_stride=2,
                                             pool0_size=3, pool0_stride=2,
                                             base_dim=64, shortcut=args.shortcut,
-                                            regularizer=args.regularizer, conv_decay=args.conv_decay, fc_decay=args.fc_decay)
+                                            regularizer=args.regularizer, conv_decay=args.conv_decay, fc_decay=args.fc_decay,
+                                            data_format=self._opt.data_format)
         return logits
 
     def define_loss(self, logits, labels, is_training):

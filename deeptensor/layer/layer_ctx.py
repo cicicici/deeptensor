@@ -17,39 +17,40 @@ def dec_layer_func(func):
         # kwargs parsing
         opt = dt.Opt(kwargs) + dt.get_ctx()
 
+        # set default data format
+        opt += dt.Opt(data_format=dt.dformat.DEFAULT)
+
         # set default mode mode
         opt += dt.Opt(is_training=True, reuse=None)
 
         # options for resnet
         opt += dt.Opt(layer_first=True, shortcut=None)
 
-        # set default argument
-        try:
-            shape = tensor.get_shape().as_list()
+        # set default shape and dim
+        in_shape = tensor.get_shape().as_list()
+        in_dim = dt.tensor.get_dim(tensor, data_format=opt.data_format)
+        opt += dt.Opt(shape=in_shape, in_dim=in_dim, dim=in_dim)
 
-            # batch normalization off, layer normalization off, dropout off
-            opt += dt.Opt(shape=shape, in_dim=shape[-1], dim=shape[-1],
-                          bn=False, ln=False, dout=0,
-                          regularizer=None, weight_decay=1e-6,
-                          summary=True, scale=True,
-                          weight_filler="he", bn_gamma=1.0, ln_gamma=1.0)
+        # batch normalization off, layer normalization off, dropout off
+        opt += dt.Opt(bn=False, ln=False, dout=0,
+                      regularizer=None, weight_decay=1e-6,
+                      summary=True, scale=True,
+                      weight_filler="he", bn_gamma=1.0, ln_gamma=1.0)
 
-            if opt.regularizer == 'l1':
-                opt.regularizer_func = lambda x: tf.reduce_mean(tf.abs(x))
-            elif opt.regularizer == 'l2':
-                opt.regularizer_func = lambda x: tf.nn.l2_loss(x) * opt.weight_decay
-            elif opt.regularizer == 'l2-b':
-                opt.regularizer_func = lambda x: tf.square(tf.reduce_mean(tf.square(x)))
-            else:
-                opt.regularizer_func = None
+        if opt.regularizer == 'l1':
+            opt.regularizer_func = lambda x: tf.reduce_mean(tf.abs(x))
+        elif opt.regularizer == 'l2':
+            opt.regularizer_func = lambda x: tf.nn.l2_loss(x) * opt.weight_decay
+        elif opt.regularizer == 'l2-b':
+            opt.regularizer_func = lambda x: tf.square(tf.reduce_mean(tf.square(x)))
+        else:
+            opt.regularizer_func = None
 
-            assert not (opt.bn and opt.ln), 'one of batch normalization and layer normalization is available.'
+        assert not (opt.bn and opt.ln), 'one of batch normalization and layer normalization is available.'
 
-            # disable bias when normalization on
-            #opt += dt.Opt(bias=not (opt.bn or opt.ln))
-            opt += dt.Opt(bias=True)
-        finally:
-            pass
+        # disable bias when normalization on
+        #opt += dt.Opt(bias=not (opt.bn or opt.ln))
+        opt += dt.Opt(bias=True)
 
         # automatic layer naming
         if opt.name is None:
@@ -72,8 +73,13 @@ def dec_layer_func(func):
             else:
                 opt.name += '_%d' % (max([int(n.split('_')[-1]) for n in exist_layers]) + 1)
 
-        dt.debug(dt.DC.NET, "[LAYER] {}, T {}, R {}, shape {}, bn {}, ln {}, scale {}, regularizer {}, weight_decay {}, act {}, dout {}, first {}, shortcut {}, bn_gamma {}, ln_gamma {}"
-                                 .format(opt.name, opt.is_training, opt.reuse, opt.shape, opt.bn, opt.ln, opt.scale, opt.regularizer, opt.weight_decay, opt.act, opt.dout, opt.layer_first, (opt.shortcut is not None), opt.bn_gamma, opt.ln_gamma))
+        dt.debug(dt.DC.NET, "[LAYER] {}, T {}, R {}, shape {}, bn {}, ln {}, scale {}, regularizer {}, weight_decay {}"
+                                 .format(opt.name, opt.is_training, opt.reuse, opt.shape, opt.bn, opt.ln,
+                                         opt.scale, opt.regularizer, opt.weight_decay))
+        dt.debug(dt.DC.NET, "        {}, act {}, dout {}, first {}, shortcut {}, bn_gamma {}, ln_gamma {}, df {}"
+                                 .format(opt.name, opt.act, opt.dout, opt.layer_first, (opt.shortcut is not None),
+                                         opt.bn_gamma, opt.ln_gamma, opt.data_format))
+        dt.dformat_chk(opt.data_format)
 
         with tf.variable_scope(opt.name, reuse=opt.reuse) as scope:
 
@@ -83,7 +89,7 @@ def dec_layer_func(func):
             else:
                 out = tensor
             out_shape = out.get_shape()
-            out_dim = dt.tensor.get_dim(out)
+            out_dim = dt.tensor.get_dim(out, data_format=opt.data_format)
 
             # apply batch normalization
             if opt.bn:
@@ -105,9 +111,13 @@ def dec_layer_func(func):
 
                     fused_eps = dt.eps if dt.eps > 1e-5 else 1e-5
                     if opt.is_training:
-                        out, mean, variance = tf.nn.fused_batch_norm(out, gamma, beta, epsilon=fused_eps)
+                        out, mean, variance = tf.nn.fused_batch_norm(out, gamma, beta, epsilon=fused_eps,
+                                                                     data_format=opt.data_format)
                     else:
-                        out, mean, variance = tf.nn.fused_batch_norm(out, gamma, beta, mean=mean_running, variance=variance_running, epsilon=fused_eps, is_training=False)
+                        out, mean, variance = tf.nn.fused_batch_norm(out, gamma, beta,
+                                                                     mean=mean_running, variance=variance_running,
+                                                                     epsilon=fused_eps, is_training=False,
+                                                                     data_format=opt.data_format)
 
                     # restore original shape if HW dims was added
                     if out_shape.ndims == 2:
@@ -116,11 +126,19 @@ def dec_layer_func(func):
                         out = tf.squeeze(out, axis=2)
                 # fallback to naive batch norm
                 else:
-                    mean, variance = tf.nn.moments(out, axes=list(range(len(out.get_shape()) - 1)))
+                    if opt.data_format == dt.dformat.NHWC:
+                        # NHWC: [0, 1, 2]
+                        axes = list(range(len(out.get_shape()) - 1))
+                    elif opt.data_format == dt.dformat.NCHW:
+                        # NCHW: [0, 2, 3]
+                        axes = [0, 2, 3]
+                    mean, variance = tf.nn.moments(out, axes=axes)
                     if opt.is_training:
-                        out = tf.nn.batch_normalization(out, mean, variance, beta, gamma, dt.eps)
+                        out = tf.nn.batch_normalization(out, mean, variance, beta, gamma, dt.eps,
+                                                        data_format=opt.data_format)
                     else:
-                        out = tf.nn.batch_normalization(out, mean_running, variance_running, beta, gamma, dt.eps)
+                        out = tf.nn.batch_normalization(out, mean_running, variance_running, beta, gamma, dt.eps,
+                                                        data_format=opt.data_format)
 
                 if opt.is_training:
                     # add running mean, variance to UPDATE_OP collection
@@ -136,7 +154,11 @@ def dec_layer_func(func):
                     gamma = dt.initializer.constant('gamma', out_dim, value=opt.ln_gamma, summary=opt.summary)
 
                 # calc layer mean, variance for final axis
-                mean, variance = tf.nn.moments(out, axes=[len(out.get_shape()) - 1], keep_dims=True)
+                if opt.data_format == dt.dformat.NHWC:
+                    axes = [len(out.get_shape()) - 1]
+                elif opt.data_format == dt.dformat.NCHW:
+                    axes = [1]
+                mean, variance = tf.nn.moments(out, axes=axes, keep_dims=True)
 
                 # apply normalization
                 out = (out - mean) / tf.sqrt(variance + dt.eps)

@@ -30,8 +30,8 @@ if ARGS.port > 1000 and hvd.rank() == 0:
     dt.util.datalink_register_recv(datalink_recv)
 
 # Train
-with dt.ctx(optim=ARGS.optim, lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal,
-            lr_curve=ARGS.lr_curve):
+with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
+            lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve):
     dt.train.train(args=ARGS, est_class = dt.estimator.CifarEstimator, est_cfg=dt.Opt(),
                    batch_size=ARGS.batch_size, summary_freq=ARGS.summary_freq,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
