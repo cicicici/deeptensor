@@ -15,7 +15,7 @@ def get_dim_stride(group, block, base_dim):
     return dim, stride
 
 def get_shortcut(group, block, x, out_dim, stride, identity, data_format, bn=True):
-    in_dim = dt.tensor.get_dim(x, data_format=data_format)
+    in_dim = dt.tensor.get_dim(x, data_format)
     if in_dim == out_dim:
         if stride == 1:
             shortcut = x
@@ -27,11 +27,8 @@ def get_shortcut(group, block, x, out_dim, stride, identity, data_format, bn=Tru
                 x = dt.transform.pool(x, size=(stride, stride), stride=[stride, stride], name='sc_pool{}_{}'.format(group, block), avg=True)
             if in_dim < out_dim:
                 pad_dim = (out_dim - in_dim) // 2
-
-            if data_format == dt.dformat.NHWC:
-                shortcut = tf.pad(x, [[0, 0], [0, 0], [0, 0], [pad_dim, pad_dim]], name='sc_pad{}_{}'.format(group, block))
-            elif data_format == dt.dformat.NCHW:
-                shortcut = tf.pad(x, [[0, 0], [pad_dim, pad_dim], [0, 0], [0, 0]], name='sc_pad{}_{}'.format(group, block))
+            paddings = dt.tensor.get_padding_channel([pad_dim], data_format)
+            shortcut = tf.pad(x, paddings, name='sc_pad{}_{}'.format(group, block))
         else:
             shortcut = dt.layer.conv(x, size=(1, 1), dim=out_dim, stride=[stride, stride],
                                      bn=bn, ln=False, act=None, dout=0,

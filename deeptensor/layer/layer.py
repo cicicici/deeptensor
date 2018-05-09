@@ -15,8 +15,8 @@ def conv(tensor, opt):
 
     size = opt.size if isinstance(opt.size, (tuple, list)) else [opt.size, opt.size]
 
-    stride = dt.tensor.get_stride(opt.stride, data_format=opt.data_format)
-    padding = dt.tensor.get_padding(opt.padding, data_format=opt.data_format) if opt.padding else None
+    stride = dt.tensor.get_stride(opt.stride, opt.data_format)
+    padding = dt.tensor.get_padding(opt.padding, opt.data_format) if opt.padding else None
     if padding is not None:
         tensor_in = tf.pad(tensor,
                            paddings=tf.constant(padding, dtype=tf.float32),
@@ -53,8 +53,8 @@ def conv(tensor, opt):
 @layer_ctx.dec_layer_func
 def dense(tensor, opt):
     #dt.log_pp(dt.DC.NET, dt.DL.DEBUG, opt)
-    dt.debug(dt.DC.NET, "            {}, in {}, out {}, bias {}, filler {}, df {}"
-                             .format(opt.name, opt.in_dim, opt.dim, opt.bias, opt.weight_filler, opt.data_format))
+    dt.debug(dt.DC.NET, "            {}, in {}, out {}, bias {}, filler {}"
+                             .format(opt.name, opt.in_dim, opt.dim, opt.bias, opt.weight_filler))
     # parameter initialize
     if opt.weight_filler == 'xavier':
         w = dt.initializer.glorot_uniform('W', (opt.in_dim, opt.dim),

@@ -70,6 +70,8 @@ def dec_sugar_func(func):
 
         # set default train mode
         opt += dt.Opt(is_training=True, reuse=None)
+        # set default data format
+        opt += dt.Opt(data_format=dt.dformat.DEFAULT)
 
         # call sugar function
         out = func(tensor, opt)

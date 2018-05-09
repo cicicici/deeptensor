@@ -8,7 +8,7 @@ import deeptensor as dt
 import tensorflow as tf
 
 
-def get_size(size, data_format=dt.dformat.DEFAULT):
+def get_size(size, data_format):
     if len(size) == 1:
         if data_format == dt.dformat.NHWC:
             _size = [1, size, size, 1]
@@ -26,7 +26,7 @@ def get_size(size, data_format=dt.dformat.DEFAULT):
 
     return _size
 
-def get_stride(stride, data_format=dt.dformat.DEFAULT):
+def get_stride(stride, data_format):
     if len(stride) == 1:
         if data_format == dt.dformat.NHWC:
             _stride = [1, stride, stride, 1]
@@ -44,7 +44,7 @@ def get_stride(stride, data_format=dt.dformat.DEFAULT):
 
     return _stride
 
-def get_padding(padding, data_format=dt.dformat.DEFAULT):
+def get_padding(padding, data_format):
     if not padding:
         pad_h, pad_w = 0, 0
     elif len(padding) == 1:
@@ -62,8 +62,29 @@ def get_padding(padding, data_format=dt.dformat.DEFAULT):
 
     return paddings
 
-def get_dim(tensor, data_format=dt.dformat.DEFAULT):
-    shape = tensor.get_shape().as_list()
+def get_padding_channel(padding, data_format):
+    if not padding:
+        pad_l, pad_r = 0, 0
+    elif len(padding) == 1:
+        pad_l = padding[0]
+        pad_r = padding[0]
+    elif len(padding) == 2:
+        pad_l, pad_r = padding[0], padding[1]
+    else:
+        raise ValueError('The padding format is incorrect')
+
+    if data_format == dt.dformat.NHWC:
+        paddings = [[0, 0], [0, 0], [0, 0], [pad_l, pad_r]]
+    elif data_format == dt.dformat.NCHW:
+        paddings = [[0, 0], [pad_l, pad_r], [0, 0], [0, 0]]
+
+    return paddings
+
+def get_shape(tensor):
+    return tensor.get_shape().as_list()
+
+def get_dim(tensor, data_format):
+    shape = get_shape(tensor)
     if data_format == dt.dformat.NHWC:
         dim = shape[-1]
     elif data_format == dt.dformat.NCHW:
