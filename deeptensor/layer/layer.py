@@ -26,8 +26,8 @@ def conv(tensor, opt):
         tensor_in = tensor
 
     #dt.log_pp(dt.DC.NET, dt.DL.DEBUG, opt)
-    dt.debug(dt.DC.NET, "            {}, size {}, in {}, out {}, stride {}, pad {}, padding {}, bias {}, filler {}, df {}"
-                             .format(opt.name, size, opt.in_dim, opt.dim, stride, opt.pad, padding, opt.bias, opt.weight_filler, opt.data_format))
+    dt.debug(dt.DC.NET, "\t\t            [conv] size {}, in {}, out {}, stride {}, pad {}, padding {}, bias {}, filler {}"
+                             .format(size, opt.in_dim, opt.dim, stride, opt.pad, padding, opt.bias, opt.weight_filler))
 
     # parameter initialize
     if opt.weight_filler == 'xavier':
@@ -53,8 +53,8 @@ def conv(tensor, opt):
 @layer_ctx.dec_layer_func
 def dense(tensor, opt):
     #dt.log_pp(dt.DC.NET, dt.DL.DEBUG, opt)
-    dt.debug(dt.DC.NET, "            {}, in {}, out {}, bias {}, filler {}"
-                             .format(opt.name, opt.in_dim, opt.dim, opt.bias, opt.weight_filler))
+    dt.debug(dt.DC.NET, "\t\t            [dense] in {}, out {}, bias {}, filler {}"
+                             .format(opt.in_dim, opt.dim, opt.bias, opt.weight_filler))
     # parameter initialize
     if opt.weight_filler == 'xavier':
         w = dt.initializer.glorot_uniform('W', (opt.in_dim, opt.dim),
@@ -78,7 +78,7 @@ def dense(tensor, opt):
 
 @layer_ctx.dec_layer_func
 def bypass(tensor, opt):
-    dt.debug(dt.DC.NET, "            {}, in {}, out {}"
-                             .format(opt.name, opt.in_dim, opt.dim))
+    dt.debug(dt.DC.NET, "\t\t            [bypass] in {}, out {}"
+                             .format(opt.in_dim, opt.dim))
     return tensor
 

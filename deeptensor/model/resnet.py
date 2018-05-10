@@ -171,7 +171,7 @@ def resnet_v2(in_tensor, num_classes,
                     n = resnet_v2_basic_block(n, group, block, base_dim, shortcut=='identity', data_format)
 
         # apply bn, relu
-        n = dt.layer.bypass(n, name='bypass0')
+        n = dt.layer.bypass(n, name='bnle0')
         n = dt.transform.pool(n, size=(8, 8), stride=[8, 8], name='pool1', avg=True)
 
     # fc layers

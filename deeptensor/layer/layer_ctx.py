@@ -73,11 +73,11 @@ def dec_layer_func(func):
             else:
                 opt.name += '_%d' % (max([int(n.split('_')[-1]) for n in exist_layers]) + 1)
 
-        dt.debug(dt.DC.NET, "[LAYER] {}, T {}, R {}, shape {}, bn {}, ln {}, scale {}, regularizer {}, weight_decay {}"
+        dt.debug(dt.DC.NET, "\t[LAYER] {}, T {}, R {}, shape {}, bn {}, ln {}, scale {}, regularizer {}, weight_decay {}"
                                  .format(opt.name, opt.is_training, opt.reuse, opt.shape, opt.bn, opt.ln,
                                          opt.scale, opt.regularizer, opt.weight_decay))
-        dt.debug(dt.DC.NET, "        {}, act {}, dout {}, first {}, shortcut {}, bn_gamma {}, ln_gamma {}, df {}"
-                                 .format(opt.name, opt.act, opt.dout, opt.layer_first, (opt.shortcut is not None),
+        dt.debug(dt.DC.NET, "\t            act {}, dout {}, first {}, shortcut {}, bn_gamma {}, ln_gamma {}, df {}"
+                                 .format(opt.act, opt.dout, opt.layer_first, (opt.shortcut is not None),
                                          opt.bn_gamma, opt.ln_gamma, opt.data_format))
         dt.dformat_chk(opt.data_format)
 
@@ -169,7 +169,7 @@ def dec_layer_func(func):
                     out = out + beta
 
             if opt.layer_first and (opt.shortcut is not None):
-                dt.debug(dt.DC.NET, "[LAYER] add shortcut [{}], first {}".format(dt.tensor_name(opt.shortcut), opt.layer_first))
+                dt.debug(dt.DC.NET, "\t[LAYER] add shortcut [{}], first {}".format(dt.tensor_name(opt.shortcut), opt.layer_first))
                 out = out + opt.shortcut
 
             # apply activation
@@ -185,7 +185,7 @@ def dec_layer_func(func):
                 out = func(out, opt)
 
                 if opt.shortcut is not None:
-                    dt.debug(dt.DC.NET, "[LAYER] add shortcut [{}], first {}".format(dt.tensor_name(opt.shortcut), opt.layer_first))
+                    dt.debug(dt.DC.NET, "\t[LAYER] add shortcut [{}], first {}".format(dt.tensor_name(opt.shortcut), opt.layer_first))
                     out = out + opt.shortcut
 
             # rename tensor

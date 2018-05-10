@@ -31,10 +31,10 @@ def pool(tensor, opt):
         tensor_in = tensor
 
     #dt.log_pp(dt.DC.NET, dt.DL.DEBUG, opt)
-    dt.debug(dt.DC.NET, "[TRANS] {}, T {}, R {}, shape {}, in_dim {}, size {}, stride {}"
+    dt.debug(dt.DC.NET, "\t[TRANS] {}, T {}, R {}, shape {}, in_dim {}, size {}, stride {}"
                              .format(opt.name, opt.is_training, opt.reuse, opt.shape, opt.in_dim, size, stride))
-    dt.debug(dt.DC.NET, "        {}, pad {}, padding {}, avg {}, dout {}, df {}"
-                             .format(opt.name, opt.pad, padding, opt.avg, opt.dout, opt.data_format))
+    dt.debug(dt.DC.NET, "\t            pad {}, padding {}, avg {}, dout {}, df {}"
+                             .format(opt.pad, padding, opt.avg, opt.dout, opt.data_format))
     dt.dformat_chk(opt.data_format)
 
     if opt.avg:
@@ -55,7 +55,7 @@ def global_pool(tensor, opt):
     opt += dt.Opt(shape=in_shape, in_dim=in_dim)
 
     #dt.log_pp(dt.DC.NET, dt.DL.DEBUG, opt)
-    dt.debug(dt.DC.NET, "[TRANS] {}, T {}, R {}, shape {}, in_dim {}, avg {}, dout {}, df {}"
+    dt.debug(dt.DC.NET, "\t[TRANS] {}, T {}, R {}, shape {}, in_dim {}, avg {}, dout {}, df {}"
                              .format(opt.name, opt.is_training, opt.reuse, opt.shape, opt.in_dim,
                                      opt.avg, opt.dout, opt.data_format))
     dt.dformat_chk(opt.data_format)
@@ -80,7 +80,7 @@ def global_pool(tensor, opt):
 def flatten(tensor, opt):
     shape = tensor.get_shape().as_list()
     dim = np.prod(shape[1:])
-    dt.debug(dt.DC.NET, "[TRANS] flatten, shape {}, out {}"
+    dt.debug(dt.DC.NET, "\t[TRANS] flatten, shape {}, out {}"
                              .format(shape, dim))
 
     return tf.reshape(tensor, [-1, dim], name=opt.name)
