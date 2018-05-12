@@ -83,13 +83,25 @@ def get_padding_channel(padding, data_format):
 def get_shape(tensor):
     return tensor.get_shape().as_list()
 
+def get_channel_axis(tensor, data_format):
+    shape = tensor.get_shape()
+    if shape.ndims == 2:
+        axis = 1
+    elif shape.ndims == 4:
+        if data_format == dt.dformat.NHWC:
+            axis = 3
+        elif data_format == dt.dformat.NCHW:
+            axis = 1
+        else:
+            raise ValueError('Invalid data format')
+    else:
+        raise ValueError('Invalid tensor dimentions')
+
+    return axis
+
 def get_dim(tensor, data_format):
     shape = get_shape(tensor)
-    if data_format == dt.dformat.NHWC:
-        dim = shape[-1]
-    elif data_format == dt.dformat.NCHW:
-        dim = shape[1]
-    else:
-        raise ValueError('Invalid data format')
+    axis = get_channel_axis(tensor, data_format)
+    dim = shape[axis]
     return dim
 

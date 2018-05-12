@@ -35,7 +35,7 @@ def get_shortcut(group, block, x, out_dim, stride, identity, data_format, bn=Tru
                                      name='sc_conv{}_{}'.format(group, block))
     return shortcut
 
-def resnet_v1_basic_block(n, group, block, base_dim, identity, data_format):
+def resnet_v1_basic_block(n, group, block, base_dim, identity, data_format, se_ratio):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
         shortcut = get_shortcut(group, block, n, dim, stride, identity, data_format)
@@ -44,9 +44,12 @@ def resnet_v1_basic_block(n, group, block, base_dim, identity, data_format):
                           size=(3, 3), dim=dim, stride=[stride, stride], name='res{}_{}_0'.format(group, block))
         n = dt.layer.conv(n, layer_first=True, shortcut=shortcut, bn_gamma=0,
                           size=(3, 3), dim=dim, stride=[1, 1], name='res{}_{}_1'.format(group, block))
+        if se_ratio > 0:
+            n_se = dt.model.se_block(n, dim, dim, data_format, se_ratio, name='se{}_{}'.format(group, block))
+            n = n * n_se
     return n
 
-def resnet_v1_bottleneck_block(n, group, block, base_dim, identity, data_format, stride_first=False):
+def resnet_v1_bottleneck_block(n, group, block, base_dim, identity, data_format, se_ratio, stride_first=False):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
         out_dim = dim * 4
@@ -58,6 +61,9 @@ def resnet_v1_bottleneck_block(n, group, block, base_dim, identity, data_format,
                           size=(3, 3), dim=dim, stride=[1, 1] if stride_first else [stride, stride], name='res{}_{}_1'.format(group, block))
         n = dt.layer.conv(n, layer_first=True, shortcut=shortcut, bn_gamma=0,
                           size=(1, 1), dim=out_dim, stride=[1, 1], name='res{}_{}_2'.format(group, block))
+        if se_ratio > 0:
+            n_se = dt.model.se_block(n, dim, out_dim, data_format, se_ratio, name='se{}_{}'.format(group, block))
+            n = n * n_se
     return n
 
 def resnet_v1(in_tensor, num_classes,
@@ -67,7 +73,7 @@ def resnet_v1(in_tensor, num_classes,
               base_dim=16,
               regularizer='l2', conv_decay=1e-4, fc_decay=1e-4,
               shortcut='identity', weight_filler='variance', use_bias=False,
-              data_format=dt.dformat.DEFAULT):
+              data_format=dt.dformat.DEFAULT, se_ratio=0):
 
     block_layers = 2
     if block_type == 'bottleneck':
@@ -92,9 +98,9 @@ def resnet_v1(in_tensor, num_classes,
         for group in range(len(blocks)):
             for block in range(blocks[group]):
                 if block_type == 'bottleneck':
-                    n = resnet_v1_bottleneck_block(n, group, block, base_dim, shortcut=='identity', data_format)
+                    n = resnet_v1_bottleneck_block(n, group, block, base_dim, shortcut=='identity', data_format, se_ratio)
                 else:
-                    n = resnet_v1_basic_block(n, group, block, base_dim, shortcut=='identity', data_format)
+                    n = resnet_v1_basic_block(n, group, block, base_dim, shortcut=='identity', data_format, se_ratio)
 
         n = dt.transform.pool(n, size=(8, 8), stride=[8, 8], name='pool1', avg=True)
 
@@ -102,13 +108,13 @@ def resnet_v1(in_tensor, num_classes,
     with dt.ctx(name='fcs', act='relu', bn=True, weight_filler=weight_filler,
                 regularizer=regularizer, weight_decay=fc_decay, bias=True, data_format=data_format):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
-        n = dt.transform.flatten(n)
+        n = dt.transform.flatten(n, name='flatten')
         #n = dt.layer.dense(n, dim=256, name='fc1')
         n = dt.layer.dense(n, dim=num_classes, act='linear', bn=False, ln=False, name='fc2')
 
     return n
 
-def resnet_v2_basic_block(n, group, block, base_dim, identity, data_format):
+def resnet_v2_basic_block(n, group, block, base_dim, identity, data_format, se_ratio):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
         shortcut = get_shortcut(group, block, n, dim, stride, identity, data_format)
@@ -117,9 +123,12 @@ def resnet_v2_basic_block(n, group, block, base_dim, identity, data_format):
                           size=(3, 3), dim=dim, stride=[stride, stride], name='res{}_{}_0'.format(group, block))
         n = dt.layer.conv(n, layer_first=False, shortcut=shortcut,
                           size=(3, 3), dim=dim, stride=[1, 1], name='res{}_{}_1'.format(group, block))
+        if se_ratio > 0:
+            n_se = dt.model.se_block(n, dim, dim, data_format, se_ratio, name='se{}_{}'.format(group, block))
+            n = n * n_se
     return n
 
-def resnet_v2_bottleneck_block(n, group, block, base_dim, identity, data_format, stride_first=False):
+def resnet_v2_bottleneck_block(n, group, block, base_dim, identity, data_format, se_ratio, stride_first=False):
     with dt.ctx(name='block{}_{}'.format(group, block)):
         dim, stride = get_dim_stride(group, block, base_dim)
         out_dim = dim * 4
@@ -131,6 +140,9 @@ def resnet_v2_bottleneck_block(n, group, block, base_dim, identity, data_format,
                           size=(3, 3), dim=dim, stride=[1, 1] if stride_first else [stride, stride], name='res{}_{}_1'.format(group, block))
         n = dt.layer.conv(n, layer_first=False, shortcut=shortcut,
                           size=(1, 1), dim=out_dim, stride=[1, 1], name='res{}_{}_2'.format(group, block))
+        if se_ratio > 0:
+            n_se = dt.model.se_block(n, dim, out_dim, data_format, se_ratio, name='se{}_{}'.format(group, block))
+            n = n * n_se
     return n
 
 def resnet_v2(in_tensor, num_classes,
@@ -140,7 +152,7 @@ def resnet_v2(in_tensor, num_classes,
               base_dim=16,
               regularizer='l2', conv_decay=1e-4, fc_decay=1e-4,
               shortcut='identity', weight_filler='variance', use_bias=False,
-              data_format=dt.dformat.DEFAULT):
+              data_format=dt.dformat.DEFAULT, se_ratio=0):
 
     block_layers = 2
     if block_type == 'bottleneck':
@@ -166,9 +178,9 @@ def resnet_v2(in_tensor, num_classes,
         for group in range(len(blocks)):
             for block in range(blocks[group]):
                 if block_type == 'bottleneck':
-                    n = resnet_v2_bottleneck_block(n, group, block, base_dim, shortcut=='identity', data_format)
+                    n = resnet_v2_bottleneck_block(n, group, block, base_dim, shortcut=='identity', data_format, se_ratio)
                 else:
-                    n = resnet_v2_basic_block(n, group, block, base_dim, shortcut=='identity', data_format)
+                    n = resnet_v2_basic_block(n, group, block, base_dim, shortcut=='identity', data_format, se_ratio)
 
         # apply bn, relu
         n = dt.layer.bypass(n, name='bnle0')
@@ -178,7 +190,7 @@ def resnet_v2(in_tensor, num_classes,
     with dt.ctx(name='fcs', act='relu', bn=True, weight_filler=weight_filler,
                 regularizer=regularizer, weight_decay=fc_decay, bias=True, data_format=data_format):
         dt.log_pp(dt.DC.NET, dt.DL.DEBUG, dt.get_ctx())
-        n = dt.transform.flatten(n)
+        n = dt.transform.flatten(n, name='flatten')
         #n = dt.layer.dense(n, dim=256, name='fc1')
         n = dt.layer.dense(n, dim=num_classes, act='linear', bn=False, ln=False, name='fc2')
 

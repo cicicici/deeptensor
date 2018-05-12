@@ -60,14 +60,14 @@ class ImageNetEstimator(estimator.BaseEstimator):
                                             pool0_size=3, pool0_stride=2,
                                             base_dim=64, shortcut=args.shortcut,
                                             regularizer=args.regularizer, conv_decay=args.conv_decay, fc_decay=args.fc_decay,
-                                            data_format=self._opt.data_format)
+                                            data_format=self._opt.data_format, se_ratio=args.se_ratio)
             elif args.model_type == "v2":
                 logits = dt.model.resnet_v2(tensor, args.class_num, block_type=args.block_type, blocks=args.blocks,
                                             conv0_size=7, conv0_stride=2,
                                             pool0_size=3, pool0_stride=2,
                                             base_dim=64, shortcut=args.shortcut,
                                             regularizer=args.regularizer, conv_decay=args.conv_decay, fc_decay=args.fc_decay,
-                                            data_format=self._opt.data_format)
+                                            data_format=self._opt.data_format, se_ratio=args.se_ratio)
         return logits
 
     def define_loss(self, logits, labels, is_training):

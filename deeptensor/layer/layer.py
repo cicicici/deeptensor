@@ -17,6 +17,11 @@ def conv(tensor, opt):
 
     stride = dt.tensor.get_stride(opt.stride, opt.data_format)
     padding = dt.tensor.get_padding(opt.padding, opt.data_format) if opt.padding else None
+
+    #dt.log_pp(dt.DC.NET, dt.DL.DEBUG, opt)
+    dt.debug(dt.DC.NET, "\t\t            [conv] size {}, in {}, out {}, stride {}, pad {}, padding {}, bias {}, filler {}"
+                             .format(size, opt.in_dim, opt.dim, stride, opt.pad, padding, opt.bias, opt.weight_filler))
+
     if padding is not None:
         tensor_in = tf.pad(tensor,
                            paddings=tf.constant(padding, dtype=tf.float32),
@@ -24,10 +29,6 @@ def conv(tensor, opt):
                            constant_values=0)
     else:
         tensor_in = tensor
-
-    #dt.log_pp(dt.DC.NET, dt.DL.DEBUG, opt)
-    dt.debug(dt.DC.NET, "\t\t            [conv] size {}, in {}, out {}, stride {}, pad {}, padding {}, bias {}, filler {}"
-                             .format(size, opt.in_dim, opt.dim, stride, opt.pad, padding, opt.bias, opt.weight_filler))
 
     # parameter initialize
     if opt.weight_filler == 'xavier':

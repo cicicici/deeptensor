@@ -11,6 +11,10 @@ def relu(x, opt):
     return tf.nn.relu(x, name=opt.name)
 
 @dt.dec_sugar_func
+def sigmoid(x, opt):
+    return tf.nn.sigmoid(x, name=opt.name)
+
+@dt.dec_sugar_func
 def linear(x, opt):
     return x
 
@@ -20,6 +24,7 @@ def softmax(x, opt):
 
 act_list = {
     'relu': relu,
+    'sigmoid': sigmoid,
     'linear': linear,
     'softmax': softmax,
 }
