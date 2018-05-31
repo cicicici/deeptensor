@@ -12,6 +12,7 @@ from .context import *
 
 import deeptensor.util
 import deeptensor.debug
+import deeptensor.config
 import deeptensor.tensor
 
 import deeptensor.data

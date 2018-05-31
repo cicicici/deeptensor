@@ -9,7 +9,7 @@ import horovod.tensorflow as hvd
 hvd.init()
 
 # Configuration
-cfg = dt.util.Config(name="ImageNet")
+cfg = dt.config.Config(name="ImageNet")
 cfg.dump_config()
 ARGS = cfg.opt().args
 

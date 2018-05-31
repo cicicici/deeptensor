@@ -9,7 +9,7 @@ import horovod.tensorflow as hvd
 hvd.init()
 
 # Configuration
-cfg = dt.util.Config(name="CIFAR-10")
+cfg = dt.config.Config(name="CIFAR-10")
 cfg.dump_config()
 ARGS = cfg.opt().args
 
