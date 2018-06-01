@@ -73,16 +73,18 @@ def resnet_v1(in_tensor, num_classes,
               base_dim=16,
               regularizer='l2', conv_decay=1e-4, fc_decay=1e-4,
               shortcut='identity', weight_filler='variance', use_bias=False,
-              data_format=dt.dformat.DEFAULT, se_ratio=0):
+              data_format=dt.dformat.DEFAULT, se_ratio=0,
+              xt_width_ratio=1, xt_cardinality=0):
 
     block_layers = 2
     if block_type == 'bottleneck':
         block_layers = 3
 
-    dt.debug(dt.DC.NET, "[RESNET] v1, class {}, type {}, blocks {}, conv0 (d {}, s {}), pool0 (d {}, s {}), base (d {}), layers {}"
+    dt.debug(dt.DC.NET, "[RESNET] v1, class {}, type {}, blocks {}, conv0 (d {}, s {}), pool0 (d {}, s {}), base (d {}), layers {}, se {}, width {}, card {}"
                                  .format(num_classes, block_type, blocks,
                                          conv0_size, conv0_stride, pool0_size, pool0_stride,
-                                         base_dim, 1 + sum(blocks) * block_layers + 1))
+                                         base_dim, 1 + sum(blocks) * block_layers + 1,
+                                         se_ratio, xt_width_ratio * base_dim, xt_cardinality))
     n = in_tensor
     # conv layers
     with dt.ctx(name='convs', act='relu', bn=True, weight_filler=weight_filler,
@@ -152,16 +154,18 @@ def resnet_v2(in_tensor, num_classes,
               base_dim=16,
               regularizer='l2', conv_decay=1e-4, fc_decay=1e-4,
               shortcut='identity', weight_filler='variance', use_bias=False,
-              data_format=dt.dformat.DEFAULT, se_ratio=0):
+              data_format=dt.dformat.DEFAULT, se_ratio=0,
+              xt_width_ratio=1, xt_cardinality=0):
 
     block_layers = 2
     if block_type == 'bottleneck':
         block_layers = 3
 
-    dt.debug(dt.DC.NET, "[RESNET] v2, class {}, type {}, blocks {}, conv0 (d {}, s {}), pool0 (d {}, s {}), base (d {}), layers {}"
+    dt.debug(dt.DC.NET, "[RESNET] v2, class {}, type {}, blocks {}, conv0 (d {}, s {}), pool0 (d {}, s {}), base (d {}), layers {}, se {}, width {}, card {}"
                                  .format(num_classes, block_type, blocks,
                                          conv0_size, conv0_stride, pool0_size, pool0_stride,
-                                         base_dim, 1 + sum(blocks) * block_layers + 1))
+                                         base_dim, 1 + sum(blocks) * block_layers + 1,
+                                         se_ratio, xt_width_ratio * base_dim, xt_cardinality))
     n = in_tensor
     # conv layers
     with dt.ctx(name='convs', act='relu', bn=True, weight_filler=weight_filler,

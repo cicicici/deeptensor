@@ -64,6 +64,8 @@ class Config(object):
             self.args_parser.add_argument('--block_type', type=str, help='Block type (basic/bottleneck)')
             self.args_parser.add_argument('--blocks', type=str, help='Blocks ([3, 3, 3])')
             self.args_parser.add_argument('--se_ratio', type=int, help='Squeeze ratio for SE block (default: 0, suggest 4)')
+            self.args_parser.add_argument('--xt_width_ratio', type=int, help='ResNeXt: feature width ratio [*base_dim] (default: 1, suggest 2)')
+            self.args_parser.add_argument('--xt_cardinality', type=int, help='ResNeXt: cardinality (default: 0 - disabled, suggest 32)')
             self.args_parser.add_argument('--regularizer', type=str, help='Regularizer type (l1/l2/"")')
             self.args_parser.add_argument('--conv_decay', type=float, help='Weight decay for convolution layers (1e-4)')
             self.args_parser.add_argument('--fc_decay', type=float, help='Weight decay for fully connected layers (1e-4)')
@@ -115,6 +117,8 @@ class Config(object):
             self._default_config[section]['block_type'] = "bottleneck"
             self._default_config[section]['blocks'] = [3, 4, 6, 3]
             self._default_config[section]['se_ratio'] = 0
+            self._default_config[section]['xt_width_ratio'] = 1
+            self._default_config[section]['xt_cardinality'] = 0
             self._default_config[section]['regularizer'] = "l2"
             self._default_config[section]['conv_decay'] = 1e-5
             self._default_config[section]['fc_decay'] = 1e-5
