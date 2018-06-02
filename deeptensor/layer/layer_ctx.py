@@ -29,7 +29,7 @@ def dec_layer_func(func):
         # set default shape and dim
         in_shape = tensor.get_shape().as_list()
         in_dim = dt.tensor.get_dim(tensor, opt.data_format)
-        opt += dt.Opt(shape=in_shape, in_dim=in_dim, dim=in_dim)
+        opt += dt.Opt(shape=in_shape, in_dim=in_dim, dim=in_dim, group=0)
 
         # batch normalization off, layer normalization off, dropout off
         opt += dt.Opt(bn=False, ln=False, dout=0,
