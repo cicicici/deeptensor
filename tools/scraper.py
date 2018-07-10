@@ -17,7 +17,7 @@ import horovod.tensorflow as hvd
 hvd.init()
 
 # Configuration
-cfg = dt.util.Config(name="Scraper", app="scraper")
+cfg = dt.config.Config(name="Scraper", app="scraper")
 ARGS = cfg.opt().args
 
 # Global
@@ -40,7 +40,7 @@ def clean_checkpoint(rank_path):
                     model = r.group(1)
                     if model != last_model:
                         for model_file in glob.glob(os.path.join(rank_path, model) + "*"):
-                            dt.debug(dt.DC.STD, "Remove model fiel: {}".format(model_file))
+                            dt.debug(dt.DC.STD, "Remove model file: {}".format(model_file))
                             os.remove(model_file)
 
 def clean_model(data_dir, model_dir):
@@ -102,6 +102,8 @@ def scan_line(stats, line):
                     stats[pat.name][fld.name].append(json.loads(match))
                 else:
                     stats[pat.name][fld.name].append(match)
+            else:
+                stats[pat.name][fld.name].append(None)
 
 def print_data(stats):
     fld_fmt = ">\t"
