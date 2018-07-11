@@ -53,7 +53,7 @@ def clean_model(data_dir, model_dir):
 
 def scan_line(stats, line):
     patterns = []
-    patterns.append(dt.Opt(name='rank', filter=None,
+    patterns.append(dt.Opt(name='rank', filter='rank',
                            fields=[dt.Opt(name='total', re='rank [0-9]+/(.+?),', type=int)]))
     patterns.append(dt.Opt(name='epoch', filter=' Epoch',
                            fields=[dt.Opt(name='ep', re='Epoch.([0-9]+?):', type=int),
