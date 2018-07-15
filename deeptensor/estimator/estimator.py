@@ -173,7 +173,7 @@ class BaseEstimator(object):
         session_config.gpu_options.allow_growth = False
         session_config.allow_soft_placement = True
         session_config.log_device_placement = False
-        session_config.gpu_options.visible_device_list = str(hvd.local_rank())
+        session_config.gpu_options.visible_device_list = str(self._opt.args.gpu0 + hvd.local_rank())
 
         save_checkpoints_secs = None
         if dt.train.is_chief():

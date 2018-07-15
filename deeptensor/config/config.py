@@ -81,6 +81,7 @@ class Config(object):
             self.args_parser.add_argument('--class_min', type=int, help='Minimal index of the first class (0)')
             self.args_parser.add_argument('--validate_ep', type=int, help='Validate every [n] epochs, set 0 to disable')
             self.args_parser.add_argument('--max_ep', type=int, help='Maximum epochs to run, (default: 1000)')
+            self.args_parser.add_argument('--gpu0', type=int, help='GPU index for device 0, (default: 0)')
         elif self._app == 'scraper':
             self.args_parser.add_argument('--data_dir', type=str, help='Data dir')
             self.args_parser.add_argument('--data_filter', type=str, help='Data dir filter')
@@ -134,6 +135,7 @@ class Config(object):
             self._default_config[section]['class_min'] = 0
             self._default_config[section]['validate_ep'] = 10
             self._default_config[section]['max_ep'] = 1000
+            self._default_config[section]['gpu0'] = 0
 
             # no command line argument
             self._default_config[section]['save_interval'] = 600
