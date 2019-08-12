@@ -14,6 +14,12 @@ from deeptensor.debug import DbgLvl as DL
 from deeptensor.debug import DbgChn as DC
 from deeptensor.debug import dbg_vld as DV
 
+try:
+    import absl.logging
+    logging.root.removeHandler(absl.logging._absl_handler)
+    absl.logging._warn_preinit_stderr = False
+except Exception:
+    pass
 
 class Logger(object):
 
@@ -36,7 +42,7 @@ class Logger(object):
 _logger_std = Logger(None)
 _logger = logging.getLogger('deeptensor')
 _logger.addHandler(logging.StreamHandler())
-_logger.setLevel(1)
+_logger.setLevel(logging.DEBUG)
 
 def set_verbosity(verbosity):
     _logger.setLevel(verbosity)

@@ -2,3 +2,4 @@ numpy
 six
 tensorflow
 horovod
+absl-py
