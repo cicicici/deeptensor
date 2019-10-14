@@ -6,26 +6,16 @@ import types
 
 from functools import wraps
 from contextlib import contextmanager
-from tensorflow.python.client import device_lib
 
 import deeptensor as dt
-import tensorflow as tf
-
+import torch
 
 #
 # GPU devices
 #
 
-_gpus = None
-
 def gpus():
-    global _gpus
-
-    if _gpus is None:
-        local_device_protos = device_lib.list_local_devices()
-        _gpus = len([x.name for x in local_device_protos if x.device_type == 'GPU'])
-
-    return max(_gpus, 1)
+    return torch.cuda.device_count()
 
 
 _context = []
@@ -43,8 +33,7 @@ def ctx(**kwargs):
     if context_now.name:
         context_now.scope_name = context_now.name
         context_now.name = None
-        with tf.variable_scope(context_now.scope_name):
-            yield
+        yield
     else:
         yield
 
@@ -103,8 +92,7 @@ def dt_reuse(tensor, **kwargs):
         if node._sugar.is_layer:
             fn = dt.layer.dec_layer_func(node._sugar.func)
             if node._sugar.arg.scope_name:
-                with tf.variable_scope(node._sugar.arg.scope_name):
-                    out = fn(out, **(node._sugar.arg + dt.Opt(name=node._sugar.name, reuse=True)))
+                out = fn(out, **(node._sugar.arg + dt.Opt(name=node._sugar.name, reuse=True)))
             else:
                 out = fn(out, **(node._sugar.arg + dt.Opt(name=node._sugar.name, reuse=True)))
         else:

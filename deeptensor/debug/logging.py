@@ -8,7 +8,6 @@ import sys
 
 import logging
 import deeptensor as dt
-import tensorflow as tf
 
 from deeptensor.debug import DbgLvl as DL
 from deeptensor.debug import DbgChn as DC

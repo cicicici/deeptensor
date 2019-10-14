@@ -1,5 +1,6 @@
 numpy
 six
-tensorflow
+torch
+torchvision
 horovod
 absl-py

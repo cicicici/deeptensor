@@ -1,45 +1,8 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import deeptensor as dt
-import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
+import torch
 
-
-def _data_to_tensor_single(data_list, batch_size, name=None):
-    _num_thread = 4
-    _cap_thread = _num_thread
-    _cap_max = 128
-    _cap_min = 16
-
-    const_list = [tf.constant(data) for data in data_list]
-    queue_list = tf.train.slice_input_producer(const_list,
-                                               capacity = batch_size * _cap_max * _cap_thread,
-                                               name = name, shuffle = False)
-
-    return tf.train.shuffle_batch(queue_list, batch_size,
-                                  capacity = batch_size * _cap_max * _cap_thread,
-                                  min_after_dequeue = batch_size * _cap_min * _cap_thread,
-                                  name = name, num_threads = _num_thread)
-
-def _data_to_tensor(data_list, batch_size, in_fmt, out_fmt, name=None):
-    _num_thread = 4
-    _cap_thread = _num_thread
-    _cap_max = 128
-    _cap_min = 16
-
-    const_list = [tf.constant(data) for data in data_list]
-
-    images, labels = tf.train.shuffle_batch(const_list, batch_size,
-                                            capacity = batch_size * _cap_max * _cap_thread,
-                                            min_after_dequeue = batch_size * _cap_min * _cap_thread,
-                                            name = name, num_threads = _num_thread,
-                                            enqueue_many=True)
-
-    images = dt.dformat_chk_conv_images(images, in_fmt, out_fmt)
-
-    return images, labels
 
 class Mnist(object):
 
@@ -72,16 +35,9 @@ class Mnist(object):
         return self
 
     def generate(self):
-        self._data_set = input_data.read_data_sets(Mnist._data_dir, reshape=self._reshape, one_hot=self._one_hot)
 
-        self._train_raw = self._data_set.train
-        self._valid_raw = self._data_set.validation
-        self._test_raw = self._data_set.test
-
-        self.train.images, self.train.labels = \
-            _data_to_tensor([self._train_raw.images, self._train_raw.labels.astype('int32')], self._batch_size, Mnist.DATA_FORMAT, self._data_format, name='train')
-        self.valid.images, self.valid.labels = \
-            _data_to_tensor([self._valid_raw.images, self._valid_raw.labels.astype('int32')], self._valid_size, Mnist.DATA_FORMAT, self._data_format, name='valid')
+        #self.train.images, self.train.labels
+        #self.valid.images, self.valid.labels
 
         return self
 

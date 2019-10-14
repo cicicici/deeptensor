@@ -10,8 +10,7 @@ import configparser
 import json
 
 import deeptensor as dt
-import horovod.tensorflow as hvd
-
+import horovod.torch as hvd
 
 class Config(object):
 

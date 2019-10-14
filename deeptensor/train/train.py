@@ -3,12 +3,8 @@ from __future__ import division
 from __future__ import print_function
 
 import deeptensor as dt
-import tensorflow as tf
-import horovod.tensorflow as hvd
-
-from tensorflow.python.training import basic_session_run_hooks
-from tensorflow.python.training import session_run_hook
-from tensorflow.core.framework.summary_pb2 import Summary
+import torch
+import horovod.torch as hvd
 
 import numpy as np
 import time
@@ -25,7 +21,7 @@ def global_step():
 
 def init_gs(opt):
     global _global_step
-    _global_step = tf.train.get_or_create_global_step()
+    _global_step = 0
 
 def set_lr_val(lr):
     global _lr_val
@@ -38,17 +34,27 @@ def get_lr_val():
 def init_lr(opt):
     global _learning_rate
 
-    _learning_rate = tf.placeholder_with_default(tf.constant(opt.lr_initial, tf.float32), [], name='learning_rate')
+    #_learning_rate = tf.placeholder_with_default(tf.constant(opt.lr_initial, tf.float32), [], name='learning_rate')
     set_lr_val(opt.lr_initial)
     dt.info(dt.DC.TRAIN, 'Initialize learning rate: initial {}, minimal {}, curve {}'
                              .format(opt.lr_initial, opt.lr_minimal, opt.lr_curve))
 
     # add learning rate summary
-    opt.lr = _learning_rate #* hvd.size()
-    tf.summary.scalar('learning_r', opt.lr)
+    #opt.lr = _learning_rate #* hvd.size()
+    #tf.summary.scalar('learning_r', opt.lr)
 
 def is_chief():
     return hvd.rank() == 0
+
+def init_summary(opt):
+    # summary writer
+    opt.log_dir = opt.model_dir + '/run-%02d%02d-%02d%02d' % tuple(time.localtime(time.time()))[1:5]
+    #opt.summary_writer = tf.summary.FileWriter(opt.log_dir)
+
+def _close_tqdm(opt):
+    if opt.tqdm is not None:
+        opt.tqdm.close()
+        opt.tqdm = None
 
 def optim(loss, **kwargs):
     opt = dt.Opt(kwargs)
@@ -58,7 +64,7 @@ def optim(loss, **kwargs):
 
     dt.debug(dt.DC.TRAIN, "[OPTIM] {}, lr {}, beta1 {}, beta2 {}, momentum {}, category {}, deferred {}"
                                  .format(opt.optim, opt.lr, opt.beta1, opt.beta2, opt.momentum, opt.catetory, opt.deferred))
-
+'''
     # select optimizer
     if opt.optim == 'MaxProp':
         optimizer = dt.optimize.MaxPropOptimizer(learning_rate=opt.lr, beta2=opt.beta2)
@@ -80,8 +86,9 @@ def optim(loss, **kwargs):
                                          global_step=tf.train.get_global_step())
 
     return grad_op
+'''
 
-
+'''
 class _LearningRateHook(tf.train.SessionRunHook):
     def __init__(self,
                  lr,
@@ -234,16 +241,6 @@ class _ScheduledTaskHook(tf.train.SessionRunHook):
     def end(self, session):
         pass
 
-
-def init_summary(opt):
-    # summary writer
-    opt.log_dir = opt.model_dir + '/run-%02d%02d-%02d%02d' % tuple(time.localtime(time.time()))[1:5]
-    opt.summary_writer = tf.summary.FileWriter(opt.log_dir)
-
-def _close_tqdm(opt):
-    if opt.tqdm is not None:
-        opt.tqdm.close()
-        opt.tqdm = None
 
 def build_train_hooks(opt):
     learning_rate_hook = _LearningRateHook(opt.lr,
@@ -407,6 +404,7 @@ def build_train_hooks(opt):
 def build_chief_train_hooks(opt):
     train_hooks = []
     return train_hooks
+'''
 
 def train(**kwargs):
 
@@ -420,7 +418,7 @@ def train(**kwargs):
 
     # default training options
     opt += dt.Opt(optim='MaxProp', beta1=0.9, beta2=0.99, momentum=0.9, category='',
-                  model_dir='asset/train', tf_random_seed=12345, op_random_seed=12345,
+                  model_dir='asset/train', random_seed=12345, op_random_seed=12345,
                   max_ep=100000, summary_freq=16, summary_steps=100,
                   save_interval=600, max_keep=5, keep_interval=1000,
                   valid_metric=[], validate_ep=0, data_format=dt.dformat.DEFAULT,
@@ -435,43 +433,16 @@ def train(**kwargs):
     dt.info(dt.DC.TRAIN, '[HOROVOD] rank {}/{}, local {}'
                              .format(hvd.rank(), hvd.size(), hvd.local_rank()))
 
-    est = opt.est_class(opt, opt.est_cfg)
-    tf_est = est.build_estimator(True)
+    #if opt.summary_freq > 0:
+    #    opt.summary_steps = opt.data.ep_size // opt.summary_freq
 
-    train_input_fn = est.build_input_fn(True)
-    if opt.summary_freq > 0:
-        opt.summary_steps = opt.data.ep_size // opt.summary_freq
+    est = opt.est_class(opt, opt.est_cfg)
+    est.build_estimator()
 
     opt.train_start = time.time()
     est.pre_train()
 
-    with tf.name_scope('bcast'):
-        bcast_hook = hvd.BroadcastGlobalVariablesHook(0)
-
-    tf_est.train(input_fn=train_input_fn,
-                 hooks=[bcast_hook])
+    #bcast_hook = hvd.BroadcastGlobalVariablesHook(0)
 
     est.post_train()
-
-def restore(sess, save_path, category=''):
-    # to list
-    if not isinstance(category, (tuple, list)):
-        category = [category]
-
-    # make variable list to load
-    var_list = {}
-    for cat in category:
-        for t in tf.global_variables():
-            if t.name.startswith(cat):
-                var_list[t.name[:-2]] = t
-
-    # restore parameters
-    saver = tf.train.Saver(var_list)
-    saver.restore(sess, save_path)
-
-def regularizer_loss(scale=1.0):
-    losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    reg_loss = scale * tf.reduce_sum(losses)
-    #reg_loss = scale * tf.reduce_sum([tf.reduce_mean(loss) for loss in losses])
-    return reg_loss
 

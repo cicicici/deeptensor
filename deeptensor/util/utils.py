@@ -5,7 +5,6 @@ from __future__ import print_function
 import time
 
 import deeptensor as dt
-import tensorflow as tf
 
 
 def get_ts():

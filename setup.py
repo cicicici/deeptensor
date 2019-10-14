@@ -10,7 +10,8 @@ from setuptools import find_packages
 requirements = [
     'numpy',
     'six',
-    'tensorflow',
+    'torch',
+    'torchvision',
     'horovod',
 ]
 

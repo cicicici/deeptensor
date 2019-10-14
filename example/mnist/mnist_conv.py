@@ -2,8 +2,8 @@
 # -*- coding: utf8 -*-
 
 import deeptensor as dt
-import tensorflow as tf
-import horovod.tensorflow as hvd
+import torch
+import horovod.torch as hvd
 
 # Init horovod
 hvd.init()
@@ -13,26 +13,33 @@ cfg = dt.config.Config(name="MNIST")
 cfg.dump_config()
 ARGS = cfg.opt().args
 
-class MnistEstimator(dt.estimator.CifarEstimator):
+class MnistEstimator(dt.estimator.ClassEstimator):
     def __init__(self, opt, cfg):
         super(MnistEstimator, self).__init__(opt, cfg)
         dt.debug(dt.DC.TRAIN, "[EST] {} initialized".format(type(self).__name__))
 
     def build_data(self, is_training):
         args = self._opt.args
-        with tf.name_scope('dataset'):
-            data = dt.data.Mnist(batch_size=args.batch_size, valid_size=args.valid_size).init_data()
-            ep_size = data.train.num_batch
-            v_ep_size = data.valid.num_batch
+        data = dt.data.Mnist(train_batch_size=args.batch_size, valid_batch_size=args.valid_size).init_data()
+        ep_size = data.train.num_batch
+        v_ep_size = data.valid.num_batch
         return dt.Opt(data=data, ep_size=ep_size, v_ep_size=v_ep_size)
 
-    def forward(self, tensor, is_training, reuse=False):
-        args = self._opt.args
-        dt.summary_image(tensor)
+    def build_model(self):
+        # Params
+        # args.model_name == "resnet":
+        # args.model_type == "v1":
+        # args.class_num
+        # args.block_type
+        # args.blocks
+        # args.shortcut
+        # args.regularizer
+        # args.conv_decay
+        # args.fc_decay
+        # self._opt.data_format
+        # args.se_ratio)
 
-        with dt.ctx(act='relu', bn=True, weight_filler='he'):
-            logits = dt.model.lenet5(tensor, args.class_num)
-        return logits
+        return None
 
 # Train
 with dt.ctx(optim=ARGS.optim, lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal,
@@ -42,5 +49,5 @@ with dt.ctx(optim=ARGS.optim, lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_min
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum,
-                   tf_random_seed=1234 * (hvd.rank()+1), deferred=ARGS.deferred)
+                   random_seed=1234 * (hvd.rank()+1), deferred=ARGS.deferred)
 

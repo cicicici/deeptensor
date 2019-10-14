@@ -16,13 +16,9 @@ import deeptensor.config
 import deeptensor.tensor
 
 import deeptensor.data
-import deeptensor.activation
 import deeptensor.initializer
 import deeptensor.metric
-import deeptensor.loss
 import deeptensor.optimize
-import deeptensor.transform
-import deeptensor.layer
 import deeptensor.train
 import deeptensor.estimator
 import deeptensor.model
