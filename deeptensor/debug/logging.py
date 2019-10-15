@@ -7,8 +7,11 @@ import time
 import sys
 
 import logging
-import deeptensor as dt
+import inspect
+import types
+from typing import cast
 
+import deeptensor as dt
 from deeptensor.debug import DbgLvl as DL
 from deeptensor.debug import DbgChn as DC
 from deeptensor.debug import dbg_vld as DV
@@ -19,6 +22,9 @@ try:
     absl.logging._warn_preinit_stderr = False
 except Exception:
     pass
+
+
+#this_function_name = cast(types.FrameType, inspect.currentframe()).f_code.co_name
 
 class Logger(object):
 
@@ -98,6 +104,10 @@ def _log_prefix(marker="D", frameskip=0):
         line)
 
     return s
+
+def trace(chn, msg, *args, frameskip=0, **kwargs):
+    if dt.DV(chn, dt.DL.TRACE):
+        _logger.debug(_log_prefix(marker="T", frameskip=frameskip) + msg, *args, **kwargs)
 
 def debug(chn, msg, *args, frameskip=0, **kwargs):
     if dt.DV(chn, dt.DL.DEBUG):

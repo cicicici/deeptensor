@@ -1,3 +1,4 @@
+from .data import *
 from .mnist import *
 #from .cifar import *
 #from .image_processing import *

@@ -4,6 +4,9 @@ from __future__ import print_function
 
 import deeptensor as dt
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 import horovod.torch as hvd
 
 import numpy as np
@@ -56,7 +59,7 @@ def _close_tqdm(opt):
         opt.tqdm.close()
         opt.tqdm = None
 
-def optim(loss, **kwargs):
+def optim_func(loss, **kwargs):
     opt = dt.Opt(kwargs)
 
     # default training options
@@ -64,347 +67,6 @@ def optim(loss, **kwargs):
 
     dt.debug(dt.DC.TRAIN, "[OPTIM] {}, lr {}, beta1 {}, beta2 {}, momentum {}, category {}, deferred {}"
                                  .format(opt.optim, opt.lr, opt.beta1, opt.beta2, opt.momentum, opt.catetory, opt.deferred))
-'''
-    # select optimizer
-    if opt.optim == 'MaxProp':
-        optimizer = dt.optimize.MaxPropOptimizer(learning_rate=opt.lr, beta2=opt.beta2)
-    elif opt.optim == 'AdaMax':
-        optimizer = dt.optimize.AdaMaxOptimizer(learning_rate=opt.lr, beta1=opt.beta1, beta2=opt.beta2)
-    elif opt.optim == 'Adam':
-        optimizer = tf.train.AdamOptimizer(learning_rate=opt.lr, beta1=opt.beta1, beta2=opt.beta2)
-    elif opt.optim == 'RMSProp':
-        optimizer = tf.train.RMSPropOptimizer(opt.lr, decay=opt.beta1, momentum=opt.momentum)
-    elif opt.optim == 'Momentum':
-        optimizer = tf.train.MomentumOptimizer(opt.lr, opt.momentum, use_nesterov=True)
-    else:
-        optimizer = tf.train.GradientDescentOptimizer(opt.lr)
-
-    with tf.name_scope('horovod'):
-        hvd_optimizer = hvd.DistributedOptimizer(optimizer)
-
-        grad_op = hvd_optimizer.minimize(loss=loss,
-                                         global_step=tf.train.get_global_step())
-
-    return grad_op
-'''
-
-'''
-class _LearningRateHook(tf.train.SessionRunHook):
-    def __init__(self,
-                 lr,
-                 lr_val=0.001,
-                 lr_minimal=1e-6,
-                 lr_curve=[[1., 10, 0]], # [[op_0, factor_0, epoch_0, updates_0], ... [op_n, factor_n, epoch_n, update_n]]
-                 global_step=None,
-                 ep_size=None):
-        self._lr = lr
-        self._lr_val = lr_val
-        self._lr_minimal = lr_minimal
-        self._lr_curve = lr_curve
-        self._global_step = global_step
-        self._ep_size = ep_size
-
-    def begin(self):
-        self._gs_start = 0
-        self._gs_window = self._ep_size * self._lr_curve[0][2]
-
-    def before_run(self, run_context):
-        requests = {}
-        requests["global_step"] = self._global_step
-        new_lr_val = self._lr_val = get_lr_val()
-        if new_lr_val < self._lr_minimal:
-            new_lr_val = self._lr_minimal
-        return tf.train.SessionRunArgs(requests, feed_dict={self._lr: new_lr_val})
-
-    def after_run(self, run_context, run_values):
-        gs_now = run_values.results["global_step"]
-        if self._gs_window > 0 and (gs_now - self._gs_start) > self._gs_window:
-            self._gs_start = gs_now
-            if self._lr_curve[0][3] != 0:
-                if self._lr_curve[0][0] == '*':
-                    self._lr_val *= self._lr_curve[0][1]
-                elif self._lr_curve[0][0] == '+':
-                    self._lr_val += self._lr_curve[0][1]
-                elif self._lr_curve[0][0] == '-':
-                    self._lr_val -= self._lr_curve[0][1]
-                elif self._lr_curve[0][0] == '/':
-                    self._lr_val /= self._lr_curve[0][1]
-                elif self._lr_curve[0][0] == '=':
-                    self._lr_val = self._lr_curve[0][1]
-                else:
-                    raise ValueError('The first element of lr curve segment must be (*,+,-,/=)')
-
-                set_lr_val(self._lr_val)
-
-                if self._lr_curve[0][3] > 0:
-                    self._lr_curve[0][3] -= 1
-            if self._lr_curve[0][3] == 0 and len(self._lr_curve) > 1:
-                self._lr_curve.pop(0)
-                self._gs_window = self._ep_size * self._lr_curve[0][2]
-
-
-class _TimedSummaryHook(tf.train.SessionRunHook):
-    def __init__(self,
-                 name="_timed",
-                 every_n_steps=100,
-                 every_n_secs=None,
-                 summary_writer=None,
-                 global_step=None,
-                 batch_size=None):
-
-        if (every_n_steps is None) == (every_n_secs is None):
-            raise ValueError('exactly one of every_n_steps'
-                             ' and every_n_secs should be provided.')
-        self._name = name
-        self._timer = basic_session_run_hooks.SecondOrStepTimer(every_steps=every_n_steps,
-                                                                every_secs=every_n_secs)
-        self._summary_writer = summary_writer
-        self._global_step = global_step
-        self._batch_size = batch_size
-
-    def begin(self):
-        if self._global_step is None:
-            raise RuntimeError("Global step should be valid")
-        self._step_tag = self._name + "/global_step/sec"
-        self._img_tag = self._name + "/img/sec"
-
-    def before_run(self, run_context):
-        requests = {"global_step": self._global_step}
-        return tf.train.SessionRunArgs(requests)
-
-    def after_run(self, run_context, run_values):
-        stale_step = run_values.results["global_step"]
-        if self._timer.should_trigger_for_step(stale_step+1):
-            cur_step = run_context.session.run(self._global_step)
-            if self._timer.should_trigger_for_step(cur_step):
-                elapsed_time, elapsed_steps = self._timer.update_last_triggered_step(cur_step)
-                if elapsed_time is not None and elapsed_time > 0:
-                    steps_per_sec = elapsed_steps / elapsed_time
-                    if self._summary_writer is not None:
-                        step_summary = Summary(value=[Summary.Value(tag=self._step_tag,
-                                                                    simple_value=steps_per_sec)])
-                        self._summary_writer.add_summary(step_summary, cur_step)
-
-                        if self._batch_size is not None:
-                            imgs_per_sec = self._batch_size * steps_per_sec
-                            img_summary = Summary(value=[Summary.Value(tag=self._img_tag,
-                                                                       simple_value=imgs_per_sec)])
-                            self._summary_writer.add_summary(img_summary, cur_step)
-
-
-class _ScheduledTaskHook(tf.train.SessionRunHook):
-    def __init__(self,
-                 name="_scheduled",
-                 every_n_steps=None,
-                 every_n_secs=None,
-                 global_step=None,
-                 summary_writer=None,
-                 opt=None,
-                 task_fn=None,
-                 task_ops=None):
-
-        if (every_n_steps is None) == (every_n_secs is None):
-            raise ValueError('exactly one of every_n_steps'
-                             ' and every_n_secs should be provided.')
-        self._name = name
-        self._timer = basic_session_run_hooks.SecondOrStepTimer(every_steps=every_n_steps,
-                                                                every_secs=every_n_secs)
-        self._global_step = global_step
-        self._summary_writer = summary_writer
-        self._opt = opt
-        self._task_fn = task_fn
-        self._task_ops = task_ops
-
-    def after_create_session(self, session, coord):
-        cur_step = session.run(self._global_step)
-        cur_ep = int(cur_step // self._opt.data.ep_size)
-        cur_ep_step = int(cur_step % self._opt.data.ep_size)
-        self._timer.update_last_triggered_step(cur_ep * self._opt.data.ep_size)
-
-    def begin(self):
-        if self._global_step is None:
-            raise RuntimeError("Global step should be valid")
-
-    def before_run(self, run_context):
-        requests = {"global_step": self._global_step}
-        if self._task_ops is not None:
-            requests = {**requests, **self._task_ops}
-        return tf.train.SessionRunArgs(requests)
-
-    def after_run(self, run_context, run_values):
-        cur_step = run_values.results["global_step"]
-        if self._timer.should_trigger_for_step(cur_step):
-            elapsed_time, elapsed_steps = self._timer.update_last_triggered_step(cur_step)
-            if self._task_fn is not None:
-                self._task_fn(run_context, run_values, self._opt, elapsed_time, elapsed_steps)
-
-    def end(self, session):
-        pass
-
-
-def build_train_hooks(opt):
-    learning_rate_hook = _LearningRateHook(opt.lr,
-                                           lr_val=get_lr_val(),
-                                           lr_minimal=opt.lr_minimal,
-                                           lr_curve=opt.lr_curve,
-                                           global_step=dt.train.global_step(),
-                                           ep_size=opt.data.ep_size)
-
-    summary_hook = tf.train.SummarySaverHook(
-                        save_steps=opt.summary_steps,
-                        save_secs=None,
-                        output_dir=opt.log_dir,
-                        summary_writer=opt.summary_writer,
-                        summary_op=tf.summary.merge_all())
-
-    #logging_hook = tf.train.LoggingTensorHook(
-    #                    tensors={'step': model.global_step,
-    #                             'loss': model.cost,
-    #                             'precision': precision},
-    #                    every_n_iter=100)
-
-    timed_summary_hook = _TimedSummaryHook(every_n_steps=opt.summary_steps,
-                                           every_n_secs=None,
-                                           summary_writer=opt.summary_writer,
-                                           global_step=dt.train.global_step(),
-                                           batch_size=opt.batch_size)
-
-
-    def batch_log(context_, values_, opt_, time_, steps_):
-        cur_step = int(values_.results["global_step"])
-        cur_lr = values_.results["lr"]
-        cur_loss = values_.results["loss"]
-        cur_acc = values_.results["acc"]
-        cur_ep = int(cur_step // opt_.data.ep_size)
-        cur_ep_step = int(cur_step % opt_.data.ep_size)
-
-        # loss history update
-        if cur_loss is not None and \
-                not np.isnan(cur_loss.all()) and not np.isinf(cur_loss.all()):
-            if opt_.stats.avg_loss is None:
-                opt_.stats.avg_loss = np.mean(cur_loss)
-            else:
-                opt_.stats.avg_loss = opt_.stats.avg_loss * 0.95 + np.mean(cur_loss) * 0.05
-
-        # acc history update
-        if cur_acc is not None:
-            if opt_.stats.avg_acc is None:
-                opt_.stats.avg_acc = np.mean(cur_acc)
-            else:
-                opt_.stats.avg_acc = opt_.stats.avg_acc * 0.95 + np.mean(cur_acc) * 0.05
-
-        if dt.util.datalink():
-            dt.util.datalink_send_opt(
-                    dt.Opt(t='tb',
-                           s=cur_step,
-                           ep=cur_ep,
-                           cs=cur_ep_step,
-                           lr=round(float(cur_lr), dt.precision),
-                           loss=round(float(cur_loss), dt.precision),
-                           acc=round(float(np.mean(cur_acc)), dt.precision),
-                           ts=dt.util.get_ts()))
-
-        if opt_.tqdm is None:
-            opt_.tqdm = tqdm(total=opt_.data.ep_size, initial=cur_ep_step, desc='train', ncols=80, unit='b', leave=False)
-        if cur_ep_step == opt_.data.ep_size - 1:
-            _close_tqdm(opt_)
-        else:
-            opt_.tqdm.update(1)
-
-
-    batch_log_task_hook = _ScheduledTaskHook(every_n_steps=1,
-                                             every_n_secs=None,
-                                             global_step=dt.train.global_step(),
-                                             summary_writer=opt.summary_writer,
-                                             opt=opt,
-                                             task_fn=batch_log,
-                                             task_ops={'lr': opt.lr, 'loss': opt.loss_0, 'acc': opt.acc_0})
-
-    # metric logging function
-    def metric_log(context_, values_, opt_, time_, steps_):
-        cur_step = values_.results["global_step"]
-        cur_lr = values_.results["lr"]
-        cur_time = time.time()
-        cur_ep = int(cur_step // opt_.data.ep_size)
-
-        metric_info = ''
-        if opt.validate_ep > 0 and cur_ep % opt.validate_ep == 0:
-            for i, m in enumerate(opt_.valid_metric):
-                if m.cnt <= 0:
-                    continue
-                m_vals = [0 for op in m.ops]
-                m_names = [dt.tensor_short_name(op) for op in m.ops]
-
-                _close_tqdm(opt_)
-                opt_.tqdm = tqdm(total=m.cnt, initial=0, desc=m.name, ncols=80, unit='b', leave=False)
-                for j in range(0, m.cnt):
-                    vals = context_.session.run(m.ops)
-                    vals = [round(float(v), dt.precision) for v in vals]
-                    for k in range(0, len(m.ops)):
-                        m_vals[k] += vals[k]
-                    if dt.util.datalink():
-                        dt.util.datalink_send_opt(
-                                dt.Opt(t='tm',
-                                       ep=cur_ep,
-                                       name=m.name,
-                                       idx=int(j),
-                                       vals=vals,
-                                       ts=dt.util.get_ts()))
-                    opt_.tqdm.update(1)
-                _close_tqdm(opt_)
-
-                for k in range(0, len(m.ops)):
-                    m_vals[k] = m_vals[k] / m.cnt
-                    metric_info += " {}/{} {:.6f},".format(m.name, m_names[k], m_vals[k])
-                    m_summary = Summary(value=[Summary.Value(tag="metrics/{}/{}".format(m.name, m_names[k]),
-                                                             simple_value=m_vals[k])])
-                    opt_.summary_writer.add_summary(m_summary, cur_step)
-
-        if is_chief():
-            dt.info(dt.DC.TRAIN, '\t%s Epoch[%03d:lr=%.6f:gs=%d] loss %s, acc %s,%s %.3f img/s' %
-                    (time.strftime("%H:%M:%S", time.gmtime(cur_time - opt.train_start)),
-                     cur_ep, cur_lr, cur_step,
-                     ('NA' if opt_.stats.avg_loss is None else '%8.6f' % opt_.stats.avg_loss),
-                     ('NA' if opt_.stats.avg_acc is None else '%8.6f' % opt_.stats.avg_acc),
-                     metric_info,
-                     float(opt_.batch_size * steps_) / (time_)))
-
-    def distribute_valid_metric(metric):
-        for i, m in enumerate(metric):
-            r_ops = []
-            with dt.ctx(name=m.name+"_dist"):
-                for op in m.ops:
-                    op_name = dt.tensor_short_name(op)
-                    r_ops.append(tf.identity(hvd.allreduce(op, average=True), name=op_name))
-            m.ops = r_ops
-
-    distribute_valid_metric(opt.valid_metric)
-    metric_log_task_hook = _ScheduledTaskHook(every_n_steps=opt.data.ep_size,
-                                              every_n_secs=None,
-                                              global_step=dt.train.global_step(),
-                                              summary_writer=opt.summary_writer,
-                                              opt=opt,
-                                              task_fn=metric_log,
-                                              task_ops={'lr': opt.lr})
-
-    train_hooks = []
-    train_hooks.append(metric_log_task_hook)
-
-    last_step = opt.max_ep * opt.data.ep_size
-    train_hooks.append(tf.train.StopAtStepHook(num_steps=None, last_step=last_step))
-    #train_hooks.append(tf.train.NanTensorHook(loss))
-
-    train_hooks.append(learning_rate_hook)
-    train_hooks.append(summary_hook)
-    train_hooks.append(timed_summary_hook)
-    train_hooks.append(batch_log_task_hook)
-
-    return train_hooks
-
-def build_chief_train_hooks(opt):
-    train_hooks = []
-    return train_hooks
-'''
 
 def train(**kwargs):
 
@@ -441,10 +103,55 @@ def train(**kwargs):
     est = opt.est_class(opt, opt.est_cfg)
     est.build_estimator()
 
-    opt.train_start = time.time()
+    device = est.device
+    train_loader = est.data.train.loader
+    valid_loader = est.data.valid.loader
+    model = est.model
+
+    optimizer = optim.SGD(model.parameters(), lr=opt.lr_initial, momentum=opt.momentum)
+
     est.pre_train()
+    train_start = time.time()
 
     #bcast_hook = hvd.BroadcastGlobalVariablesHook(0)
 
+    for epoch in range(1, 10 + 1):
+
+        model.train()
+        for batch_idx, (data, target) in enumerate(train_loader):
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = F.nll_loss(output, target)
+            loss.backward()
+            optimizer.step()
+            if batch_idx % 10 == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                    100. * batch_idx / len(train_loader), loss.item()))
+
+
+        model.eval()
+        test_loss = 0
+        correct = 0
+        with torch.no_grad():
+            for data, target in valid_loader:
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                test_loss += F.nll_loss(output, target, reduction='sum').item()
+                pred = output.argmax(dim=1, keepdim=True)
+                correct += pred.eq(target.view_as(pred)).sum().item()
+
+        test_loss /= len(valid_loader.dataset)
+
+        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+            test_loss, correct, len(valid_loader.dataset),
+            100. * correct / len(valid_loader.dataset)))
+
+    train_end = time.time()
     est.post_train()
+    print(time.strftime("%H:%M:%S", time.gmtime(train_end - train_start)))
+
+    #if (args.save_model):
+    #    torch.save(est.model().state_dict(), "mnist_cnn.pt")
 

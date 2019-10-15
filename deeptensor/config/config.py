@@ -14,7 +14,7 @@ import horovod.torch as hvd
 
 class Config(object):
 
-    def __init__(self, name="deeptensor", app='app', argv=None, command=None):
+    def __init__(self, name="deeptensor", app='train', argv=None, command=None):
         self._name = name
         self._app = app
         if argv is None:
@@ -260,7 +260,7 @@ class Config(object):
         dt.dbg_cfg(level=self._opt.debug.level,
                    channel=self._opt.debug.channel)
 
-        if self._opt.args.trace and not dbg.dbg_lvl(dt.DL.TRACE):
+        if self._opt.args.trace and not dt.dbg_lvl(dt.DL.TRACE):
             dt.dbg_cfg(level=dt.DL.TRACE)
 
         # dump important information

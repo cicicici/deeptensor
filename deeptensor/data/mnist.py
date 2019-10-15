@@ -2,9 +2,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import deeptensor as dt
 import torch
+from torchvision import datasets, transforms
 
+from deeptensor.data import data as data
 
-class Mnist(object):
+class Mnist(data.BaseData):
 
     ORIG_IMAGE_SIZE = 28
     ORIG_LABEL_SIZE = 1
@@ -23,7 +25,10 @@ class Mnist(object):
                  batch_size=128, valid_size=128,
                  out_height=IMAGE_HEIGHT, out_width=IMAGE_WIDTH, distorted=False,
                  num_workers=1, pin_memory=True,
-                 shard=False, data_format=dt.dformat.DEFAULT):
+                 shuffle=True, shard=False, data_format=dt.dformat.DEFAULT):
+        super(Mnist, self).__init__()
+        self.tag = "DATA::MNIST"
+
         self._data_dir = data_dir
 
         self._batch_size = batch_size
@@ -36,10 +41,13 @@ class Mnist(object):
         self._num_workers = num_workers
         self._pin_memory = pin_memory
 
+        self._shuffle = shuffle
         self._shard = shard
         self._data_format = data_format
 
     def init_data(self):
+        dt.trace(dt.DC.DATA, "[{}] init data".format(self.tag))
+
         self.train, self.valid, self.test = dt.Opt(), dt.Opt, dt.Opt()
 
         self.train.num_batch = Mnist.TRAIN_NUM_PER_EPOCH // self._batch_size
@@ -47,7 +55,24 @@ class Mnist(object):
 
         return self
 
-    def generate(self):
+    def load_data(self):
+        dt.trace(dt.DC.DATA, "[{}] load data".format(self.tag))
+
+        kwargs = {'num_workers': 1, 'pin_memory': True} if self._pin_memory else {}
+        self.train.loader = torch.utils.data.DataLoader(
+            datasets.MNIST(self._data_dir, train=True, download=True,
+                           transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize((0.1307,), (0.3081,))
+                           ])),
+                           batch_size=self._batch_size, shuffle=self._shuffle, **kwargs)
+
+        self.valid.loader = torch.utils.data.DataLoader(
+            datasets.MNIST(self._data_dir, train=False, transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize((0.1307,), (0.3081,))
+                           ])),
+                           batch_size=self._valid_size, shuffle=False, **kwargs)
 
         return self
 

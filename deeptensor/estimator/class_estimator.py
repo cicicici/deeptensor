@@ -12,12 +12,13 @@ class ClassEstimator(estimator.BaseEstimator):
 
     def __init__(self, opt, cfg):
         super(ClassEstimator, self).__init__(opt, cfg)
-        dt.debug(dt.DC.TRAIN, "[EST] {} initialized".format(type(self).__name__))
+        self.tag = "EST::CLASS"
+        dt.trace(dt.DC.MODEL, "[{}] ({}) __init__".format(self.tag, type(self).__name__))
 
     def preprocess_data(self, tensor, is_training):
         return None
 
-    def build_data(self, is_training):
+    def build_data(self):
         args = self._opt.args
 
         # Params
@@ -27,12 +28,13 @@ class ClassEstimator(estimator.BaseEstimator):
         # out_height, out_width
         # data_format
 
-        # Output
-        data = None
-        ep_size = 0 # data.train.num_batch
-        v_ep_size = 0 # data.valid.num_batch
+        self._data = None
 
-        return dt.Opt(data=data, ep_size=ep_size, v_ep_size=v_ep_size)
+        return True
+
+    def load_data(self):
+        self.data.load_data()
+        return True
 
     def build_model(self):
         # Params
@@ -48,9 +50,10 @@ class ClassEstimator(estimator.BaseEstimator):
         # self._opt.data_format
         # args.se_ratio)
 
-        return None
+        self._model = None
+        return False
 
-    def forward(self, tensor, is_training, reuse=False):
+    def forward(self, tensor, is_training):
         args = self._opt.args
         logits = None
         return logits

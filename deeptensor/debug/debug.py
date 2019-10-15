@@ -11,11 +11,13 @@ from enum import IntFlag
 class DbgChn(IntFlag):
     NONE    = 0
     STD     = 1
-    DATA    = 2
-    NET     = 4
-    TRAIN   = 8
-    VALID   = 16
-    ALL     = 255
+    NET     = 2
+    DATA    = 4
+    MODEL   = 8
+    TRAIN   = 16
+    VALID   = 32
+    INFER   = 64
+    ALL     = 65535
 
 
 class DbgLvl(IntEnum):

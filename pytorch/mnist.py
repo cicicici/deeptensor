@@ -1,5 +1,6 @@
 from __future__ import print_function
 import argparse
+import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -105,9 +106,14 @@ def main():
     model = Net().to(device)
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 
+    train_start = time.time()
+
     for epoch in range(1, args.epochs + 1):
         train(args, model, device, train_loader, optimizer, epoch)
         test(args, model, device, test_loader)
+
+    train_end = time.time()
+    print(time.strftime("%H:%M:%S", time.gmtime(train_end - train_start)))
 
     if (args.save_model):
         torch.save(model.state_dict(), "mnist_cnn.pt")

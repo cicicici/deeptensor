@@ -14,6 +14,8 @@ class BaseEstimator(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, opt, cfg):
+        self.tag = "EST::BASE"
+        dt.trace(dt.DC.MODEL, "[{}] ({}) __init__".format(self.tag, type(self).__name__))
         self._opt = opt
         self._cfg = cfg
 
@@ -23,6 +25,34 @@ class BaseEstimator(object):
 
         self._use_cuda = not cfg.no_cuda and torch.cuda.is_available()
         self._device = torch.device("cuda" if self._use_cuda else "cpu")
+
+    @property
+    def tag(self):
+        return self._tag
+
+    @tag.setter
+    def tag(self, value):
+        self._tag = value
+
+    @property
+    def use_cuda(self):
+        return self._use_cuda
+
+    @property
+    def device(self):
+        return self._device
+
+    @property
+    def data(self):
+        return self._data
+
+    @property
+    def model(self):
+        return self._model
+
+    @property
+    def loss(self):
+        return self._loss
 
     # Abstract
     @abstractmethod
@@ -34,11 +64,15 @@ class BaseEstimator(object):
         return None
 
     @abstractmethod
+    def load_data(self):
+        return None
+
+    @abstractmethod
     def build_model(self):
         return None
 
     @abstractmethod
-    def forward(self, tensor, is_training, reuse=False):
+    def forward(self, tensor, is_training):
         return None
 
     @abstractmethod
@@ -54,14 +88,17 @@ class BaseEstimator(object):
         return []
 
     def pre_train(self):
-        return None
+        return False
 
     def post_train(self):
-        return None
+        return False
 
     # Core
     def build_estimator(self):
-        return None
+        self.build_data()
+        self.load_data()
+        self.build_model()
+        return self
 
     def train(self):
         return None
