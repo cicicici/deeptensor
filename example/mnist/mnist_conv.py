@@ -10,7 +10,6 @@ hvd.init()
 
 # Configuration
 cfg = dt.config.Config(name="MNIST")
-cfg.dump_config()
 ARGS = cfg.opt().args
 
 class MnistEstimator(dt.estimator.ClassEstimator):

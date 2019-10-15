@@ -2,8 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import types
-
 from functools import wraps
 from contextlib import contextmanager
 
@@ -17,38 +15,84 @@ import torch
 def gpus():
     return torch.cuda.device_count()
 
+__global_ctx_list = []
 
-_context = []
+@contextmanager
+def ctx(ctx_list, opt, **kwargs):
+    global __global_ctx_list
+
+    # append current context when enter
+    if opt is None:
+        _cur_ctx = dt.Opt(kwargs)
+    else:
+        _cur_ctx = opt + dt.Opt(kwargs)
+
+    if ctx_list is None:
+        __global_ctx_list += [_cur_ctx]
+    else:
+        ctx_list += [_cur_ctx]
+
+    yield
+
+    # clear current context when exit
+    if ctx_list is None:
+        del __global_ctx_list[-1]
+    else:
+        del ctx_list[-1]
 
 @contextmanager
 def ctx(**kwargs):
-    global _context
+    global __global_ctx_list
 
-    # set options when enter
-    # set options when enter
-    context_now = dt.Opt(kwargs)
-    _context += [context_now]
+    # append current context when enter
+    _cur_ctx = dt.Opt(kwargs)
+    __global_ctx_list += [_cur_ctx]
 
-    # if named context
-    if context_now.name:
-        context_now.scope_name = context_now.name
-        context_now.name = None
-        yield
-    else:
-        yield
+    yield
 
-    # clear options when exit
-    del _context[-1]
+    # clear current context when exit
+    del __global_ctx_list[-1]
 
-def get_ctx():
-    global _context
+def get_ctx_list(**kwargs):
+    _cur_ctx = dt.Opt(kwargs)
+    return [_cur_ctx]
+
+def get_ctx(ctx_list):
+    global __global_ctx_list
 
     # merge current context
     res = dt.Opt()
-    for c in reversed(_context):
+    if ctx_list is None:
+        for c in reversed(__global_ctx_list):
+            res += c
+    else:
+        for c in reversed(ctx_list):
+            res += c
+
+    return res
+
+def get_ctx():
+    global __global_ctx_list
+
+    # merge current context
+    res = dt.Opt()
+    for c in reversed(__global_ctx_list):
         res += c
 
     return res
+
+def dec_ctx_func(func):
+
+    @wraps(func)
+    def wrapper(ctx_list, **kwargs):
+        # kwargs parsing
+        _opt = dt.Opt(kwargs) + get_ctx(ctx_list)
+
+        _out = func(ctx_list, _opt)
+
+        return _out
+
+    return wrapper
 
 def dec_sugar_func(func):
 
@@ -65,38 +109,7 @@ def dec_sugar_func(func):
         # call sugar function
         out = func(tensor, opt)
 
-        # save node info for reuse
-        out._sugar = dt.Opt(func=func, arg=dt.Opt(kwargs)+get_ctx(),
-                            prev=tensor)
-        # inject reuse function
-        out._reuse = types.MethodType(dt_reuse, out)
-
         return out
 
     return wrapper
 
-def dt_reuse(tensor, **kwargs):
-    opt = dt.Opt(kwargs)
-    assert hasattr(tensor, '_sugar'), 'cannot reuse this node.'
-    assert opt.input is not None, 'input is mandatory.'
-
-    # get all nodes in this graph
-    nodes, prev = [tensor], tensor._sugar.prev
-    while prev is not None:
-        nodes = [prev] + nodes
-        prev = prev._sugar.prev if hasattr(prev, '_sugar') else None
-
-    # create graph again for this input
-    out = opt.input
-    for node in nodes[1:]:  # exclude head node
-        if node._sugar.is_layer:
-            fn = dt.layer.dec_layer_func(node._sugar.func)
-            if node._sugar.arg.scope_name:
-                out = fn(out, **(node._sugar.arg + dt.Opt(name=node._sugar.name, reuse=True)))
-            else:
-                out = fn(out, **(node._sugar.arg + dt.Opt(name=node._sugar.name, reuse=True)))
-        else:
-            fn = dt.dec_sugar_func(node._sugar.func)
-            out = fn(out, **node._sugar.arg)
-
-    return out

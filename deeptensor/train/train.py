@@ -48,7 +48,7 @@ def is_chief():
 
 def init_summary(opt):
     # summary writer
-    opt.log_dir = opt.model_dir + '/run-%02d%02d-%02d%02d' % tuple(time.localtime(time.time()))[1:5]
+    opt.log_dir = opt.inst_dir + '/run-%02d%02d-%02d%02d' % tuple(time.localtime(time.time()))[1:5]
     #opt.summary_writer = tf.summary.FileWriter(opt.log_dir)
 
 def _close_tqdm(opt):
@@ -427,14 +427,16 @@ def train(**kwargs):
     # stats
     opt += dt.Opt(stats=dt.Opt(avg_loss=None, avg_acc=None))
 
-    dt.info(dt.DC.TRAIN, '[TRAIN] opt [{}]'
-                             .format(opt))
+    dt.info(dt.DC.TRAIN, '[TRAIN] opt')
+    dt.print_pp(dt.opt_to_dict(opt))
 
     dt.info(dt.DC.TRAIN, '[HOROVOD] rank {}/{}, local {}'
                              .format(hvd.rank(), hvd.size(), hvd.local_rank()))
 
     #if opt.summary_freq > 0:
     #    opt.summary_steps = opt.data.ep_size // opt.summary_freq
+
+    torch.manual_seed(opt.random_seed)
 
     est = opt.est_class(opt, opt.est_cfg)
     est.build_estimator()

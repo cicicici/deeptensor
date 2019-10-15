@@ -78,7 +78,7 @@ class ClassEstimator(estimator.BaseEstimator):
         return valid_metric
 
     def pre_train(self):
-        print(self._opt)
+        print(self._device)
         return None
 
     def post_train(self):

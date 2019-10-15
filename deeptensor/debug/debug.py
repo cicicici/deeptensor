@@ -15,12 +15,14 @@ class DbgChn(IntFlag):
     NET     = 4
     TRAIN   = 8
     VALID   = 16
+    ALL     = 255
 
 
 class DbgLvl(IntEnum):
     NONE    = 0
     NOTSET  = 0
     MAX     = 5
+    TRACE   = 5
     DEBUG   = 10
     MED     = 15
     INFO    = 20
@@ -31,11 +33,7 @@ class DbgLvl(IntEnum):
 
 
 _dbg_cfg = dt.Opt()
-_dbg_cfg += dt.Opt(level=DbgLvl.MAX, channel=DbgChn.STD |
-                                             DbgChn.DATA |
-                                             DbgChn.NET |
-                                             DbgChn.TRAIN |
-                                             DbgChn.VALID)
+_dbg_cfg += dt.Opt(level=DbgLvl.MAX, channel=DbgChn.ALL)
 
 def dbg_cfg_val():
     global _dbg_cfg

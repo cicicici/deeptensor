@@ -2,11 +2,45 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import time
+import os
+import sys
+import random
 
-import deeptensor as dt
+def token_in_list(line_list, token):
+    in_list = False
 
+    if line_list and len(token) > 0:
+        for line in line_list:
+            if token in line:
+                in_list = True
+                break
 
-def get_ts():
-    return round(time.time(), 6)
+    return in_list
+
+def list_in_token(line_list, token):
+    in_token = False
+
+    if line_list and len(token) > 0:
+        for line in line_list:
+            if line in token:
+                in_token = True
+                break
+
+    return in_token
+
+def split_list(line_list, parts, rand=False):
+    splits = None
+
+    if line_list and parts > 0:
+        splits = []
+        for i in range(parts):
+            splits.append([])
+
+        if rand:
+            random.shuffle(line_list)
+
+        for i, line in enumerate(line_list):
+            splits[i%parts].append(line)
+
+    return splits
 

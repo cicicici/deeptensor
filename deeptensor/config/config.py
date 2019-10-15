@@ -14,7 +14,7 @@ import horovod.torch as hvd
 
 class Config(object):
 
-    def __init__(self, name="demo", app='train', argv=None, command=None):
+    def __init__(self, name="deeptensor", app='app', argv=None, command=None):
         self._name = name
         self._app = app
         if argv is None:
@@ -31,13 +31,18 @@ class Config(object):
         self.save_config()
         self.post_config()
 
+    def init_usr_args(self):
+        pass
+
     def init_args(self):
         self.args_parser = argparse.ArgumentParser(
             description="DeepTensor {}".format(self._name),
             epilog="Usage: {} -c config.ini [options]".format(self._command)
         )
 
-        # required argument
+        self.init_usr_args()
+
+        # optional arguments
         self.args_parser.add_argument('-c', type=str, action="store",
                                       help='Config file',
                                       default="config.ini", required=True)
@@ -46,9 +51,11 @@ class Config(object):
         self.args_parser.add_argument('--tag', type=str, help='Tag')
         self.args_parser.add_argument('--host', type=str, help='Datalink host')
         self.args_parser.add_argument('--port', type=int, help='Datalink port')
-        self.args_parser.add_argument('--out_dir', type=str, help='Output dir')
+        self.args_parser.add_argument('--work_dir', type=str, help='Output dir')
         self.args_parser.add_argument('--model_dir', type=str, help='Model dir')
         self.args_parser.add_argument('--add', type=str, help='Addtitional options')
+        self.args_parser.add_argument('-m', type=str, help='Run mode', default="")
+        self.args_parser.add_argument('--trace', action='store_true', help='Enable tracing')
 
         if self._app == 'train':
             self.args_parser.add_argument('--data_dir', type=str, help='Data dir')
@@ -87,7 +94,12 @@ class Config(object):
 
     def parse_args(self):
         self._args = self.args_parser.parse_args(self._argv)
-        #print(self._args)
+
+    def default_set_config(self, section, key, val):
+        self._default_config[section][key] = val
+
+    def default_usr_config(self):
+        pass
 
     def default_config(self):
         self._default_config = {}
@@ -99,9 +111,10 @@ class Config(object):
         self._default_config[section]['tag'] = ""
         self._default_config[section]['host'] = "127.0.0.1"
         self._default_config[section]['port'] = 7001
-        self._default_config[section]['out_dir'] = "_train/imagenet"
+        self._default_config[section]['work_dir'] = "_train/imagenet"
         self._default_config[section]['model_dir'] = ""
         self._default_config[section]['add'] = {}
+        self._default_config[section]['trace'] = False
 
         # training configurations
         if self._app == 'train':
@@ -149,12 +162,19 @@ class Config(object):
         # debug configurations
         section = 'debug'
         self._default_config[section] = {}
-        self._default_config[section]['channel'] = 255
-        self._default_config[section]['level'] = 5
+        self._default_config[section]['channel'] = dt.DC.ALL
+        self._default_config[section]['level'] = dt.DL.DEBUG
+
+        self.default_usr_config()
 
     def init_config(self):
         self._config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
         self._config.read(self._args.c)
+
+        if 'args' not in self._config:
+            self._config['args'] = {}
+        if 'debug' not in self._config:
+            self._config['debug'] = {}
 
         self._opt = dt.Opt()
 
@@ -184,10 +204,13 @@ class Config(object):
                     val_str = '"' + val_str + '"'
 
                 if type(opt_val) is not type(val):
-                    print("[Convert Arg] {}: {}, {} => {}".format(arg, val, type(val), type(opt_val)))
+                    dt.log(log.DC.STD, "[Convert Arg] {}: {}, {} => {}".format(arg, val, type(val), type(opt_val)))
                     self._opt.args[arg] = json.loads(val_str)
                 else:
                     self._opt.args[arg] = val
+                self._config['args'][arg] = val_str
+            else:
+                self._opt.args[arg] = val
                 self._config['args'][arg] = val_str
 
         # add default settings
@@ -210,39 +233,41 @@ class Config(object):
                 model_dir=time.strftime('%Y%m%d_%H%M%S', time.localtime())
             if len(self._opt.args.tag) > 0:
                 model_dir = model_dir + "_" + self._opt.args.tag
-            model_dir="{}/{}".format(self._opt.args.out_dir, model_dir)
+            model_dir="{}/{}".format(self._opt.args.work_dir, model_dir)
 
-        model_dir = "{}/r{}".format(model_dir, hvd.rank())
+        inst_dir = "{}/r{}".format(model_dir, hvd.rank())
 
         try:
-            if not os.path.isdir(model_dir):
-                os.makedirs(model_dir)
+            if not os.path.isdir(inst_dir):
+                os.makedirs(inst_dir)
         except:
             pass
         self._opt.args.model_dir = model_dir
         self._config['args']['_model_dir'] = '"' + model_dir + '"'
+        self._opt.args.inst_dir = inst_dir
+        self._config['args']['_inst_dir'] = '"' + inst_dir + '"'
         # config file
-        with open('{}/config.ini'.format(model_dir), 'w') as configfile:
+        with open('{}/config.ini'.format(inst_dir), 'w') as configfile:
             self._config.write(configfile)
         # log file
-        dt.set_log_file('{}/log.txt'.format(model_dir))
+        dt.set_log_file('{}/log.txt'.format(inst_dir))
 
         self._model_dir = model_dir
+        self._inst_dir = inst_dir
 
     def post_config(self):
         # Set debug settings
         dt.dbg_cfg(level=self._opt.debug.level,
                    channel=self._opt.debug.channel)
 
+        if self._opt.args.trace and not dbg.dbg_lvl(dt.DL.TRACE):
+            dt.dbg_cfg(level=dt.DL.TRACE)
+
         # dump important information
         dt.info(dt.DC.STD, "{} - {}".format(self._opt.args.name, self._opt.args.tag))
         dt.info(dt.DC.STD, "Rank {}: command [{}], argv [{}]".format(hvd.rank(), self._command, self._argv))
         dt.info(dt.DC.STD, "Rank {}: model_dir [{}]".format(hvd.rank(), self._model_dir))
         dt.info(dt.DC.STD, "Rank {}: opt [{}]".format(hvd.rank(), self._opt))
-
-    def dump_config(self):
-        if self._app == 'train':
-            dt.info(dt.DC.NET, "Tensorboard: $ tensorboard --logdir {} --port {}".format(self._model_dir, 6006))
 
     def opt(self):
         return self._opt;
