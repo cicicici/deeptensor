@@ -59,6 +59,7 @@ class Mnist(data.BaseData):
         dt.trace(dt.DC.DATA, "[{}] load data".format(self.tag))
 
         kwargs = {'num_workers': 1, 'pin_memory': True} if self._pin_memory else {}
+        print(kwargs)
         self.train.loader = torch.utils.data.DataLoader(
             datasets.MNIST(self._data_dir, train=True, download=True,
                            transform=transforms.Compose([

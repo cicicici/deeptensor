@@ -7,6 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torchvision import datasets, transforms
+
 import horovod.torch as hvd
 
 import numpy as np
@@ -67,6 +69,23 @@ def optim_func(loss, **kwargs):
 
     dt.debug(dt.DC.TRAIN, "[OPTIM] {}, lr {}, beta1 {}, beta2 {}, momentum {}, category {}, deferred {}"
                                  .format(opt.optim, opt.lr, opt.beta1, opt.beta2, opt.momentum, opt.catetory, opt.deferred))
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(1, 20, 5, 1)
+        self.conv2 = nn.Conv2d(20, 50, 5, 1)
+        self.fc1 = nn.Linear(4*4*50, 500)
+        self.fc2 = nn.Linear(500, 10)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = x.view(-1, 4*4*50)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return F.log_softmax(x, dim=1)
 
 def train(**kwargs):
 
@@ -104,9 +123,26 @@ def train(**kwargs):
     est.build_estimator()
 
     device = est.device
-    train_loader = est.data.train.loader
-    valid_loader = est.data.valid.loader
+    #train_loader = est.data.train.loader
+    #valid_loader = est.data.valid.loader
     model = est.model
+
+    kwargs = {'num_workers': 1, 'pin_memory': True} if est.use_cuda else {}
+    print(kwargs)
+    train_loader = torch.utils.data.DataLoader(
+        datasets.MNIST('_asset/data/mnist', train=True, download=True,
+                       transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.1307,), (0.3081,))
+                       ])),
+        batch_size=opt.args.batch_size, shuffle=True, **kwargs)
+    valid_loader = torch.utils.data.DataLoader(
+        datasets.MNIST('_asset/data/mnist', train=False, transform=transforms.Compose([
+                           transforms.ToTensor(),
+                           transforms.Normalize((0.1307,), (0.3081,))
+                       ])),
+        batch_size=opt.args.valid_size, shuffle=True, **kwargs)
+    #model = Net().to(device)
 
     optimizer = optim.SGD(model.parameters(), lr=opt.lr_initial, momentum=opt.momentum)
 

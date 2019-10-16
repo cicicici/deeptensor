@@ -55,7 +55,7 @@ class ClassEstimator(estimator.BaseEstimator):
 
     def forward(self, tensor, is_training):
         args = self._opt.args
-        logits = None
+        logits = self._model(tensor)
         return logits
 
     def define_loss(self, logits, labels, is_training):
