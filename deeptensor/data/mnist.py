@@ -66,14 +66,14 @@ class Mnist(data.BaseData):
                                transforms.ToTensor(),
                                transforms.Normalize((0.1307,), (0.3081,))
                            ])),
-                           batch_size=self._batch_size, shuffle=self._shuffle, **kwargs)
+            batch_size=self._batch_size, shuffle=self._shuffle, **kwargs)
 
         self.valid.loader = torch.utils.data.DataLoader(
             datasets.MNIST(self._data_dir, train=False, transform=transforms.Compose([
                                transforms.ToTensor(),
                                transforms.Normalize((0.1307,), (0.3081,))
                            ])),
-                           batch_size=self._valid_size, shuffle=False, **kwargs)
+            batch_size=self._valid_size, shuffle=False, **kwargs)
 
         return self
 

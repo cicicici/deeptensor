@@ -54,8 +54,8 @@ class Config(object):
         self.args_parser.add_argument('--work_dir', type=str, help='Output dir')
         self.args_parser.add_argument('--model_dir', type=str, help='Model dir')
         self.args_parser.add_argument('--add', type=str, help='Addtitional options')
-        self.args_parser.add_argument('-m', type=str, help='Run mode', default="")
-        self.args_parser.add_argument('--trace', action='store_true', help='Enable tracing')
+        self.args_parser.add_argument('-m', type=str, help='Run mode')
+        self.args_parser.add_argument('--trace', action='store_const', const=True, help='Enable tracing')
 
         if self._app == 'train':
             self.args_parser.add_argument('--data_dir', type=str, help='Data dir')
@@ -114,6 +114,7 @@ class Config(object):
         self._default_config[section]['work_dir'] = "_train/imagenet"
         self._default_config[section]['model_dir'] = ""
         self._default_config[section]['add'] = {}
+        self._default_config[section]['m'] = ""
         self._default_config[section]['trace'] = False
 
         # training configurations
