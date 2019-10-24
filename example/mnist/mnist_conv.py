@@ -55,7 +55,7 @@ class MnistEstimator(dt.estimator.ClassEstimator):
 # Train
 with dt.ctx(optim=ARGS.optim, lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve):
     dt.train.train(args=ARGS, est_class = MnistEstimator, est_cfg=dt.Opt(),
-                   batch_size=ARGS.batch_size, summary_freq=ARGS.summary_freq,
+                   batch_size=ARGS.batch_size, valid_size=ARGS.valid_size, summary_freq=ARGS.summary_freq,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum,

@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import math
+
 import deeptensor as dt
 import torch
 from torchvision import datasets, transforms
@@ -16,7 +18,7 @@ class Mnist(data.BaseData):
     IMAGE_WIDTH = 28
     NUM_CLASSES = 10
 
-    TRAIN_NUM_PER_EPOCH = 50000
+    TRAIN_NUM_PER_EPOCH = 60000
     EVAL_NUM_PER_EPOCH = 10000
 
     DATA_FORMAT = dt.dformat.NHWC
@@ -50,8 +52,11 @@ class Mnist(data.BaseData):
 
         self.train, self.valid, self.test = dt.Opt(), dt.Opt, dt.Opt()
 
-        self.train.num_batch = Mnist.TRAIN_NUM_PER_EPOCH // self._batch_size
-        self.valid.num_batch = Mnist.EVAL_NUM_PER_EPOCH // self._valid_size
+        self.train.batch_size = self._batch_size
+        self.valid.batch_size = self._valid_size
+
+        self.train.num_batch = int(math.ceil(Mnist.TRAIN_NUM_PER_EPOCH / self._batch_size))
+        self.valid.num_batch = int(math.ceil(Mnist.EVAL_NUM_PER_EPOCH / self._valid_size))
 
         return self
 
@@ -59,7 +64,6 @@ class Mnist(data.BaseData):
         dt.trace(dt.DC.DATA, "[{}] load data".format(self.tag))
 
         kwargs = {'num_workers': 1, 'pin_memory': True} if self._pin_memory else {}
-        print(kwargs)
         self.train.loader = torch.utils.data.DataLoader(
             datasets.MNIST(self._data_dir, train=True, download=True,
                            transform=transforms.Compose([

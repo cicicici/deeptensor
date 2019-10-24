@@ -24,6 +24,11 @@ def global_step():
     global _global_step
     return _global_step
 
+def global_step_inc():
+    global _global_step
+    _global_step += 1
+    return _global_step
+
 def init_gs(opt):
     global _global_step
     _global_step = 0
@@ -41,6 +46,7 @@ def init_lr(opt):
 
     #_learning_rate = tf.placeholder_with_default(tf.constant(opt.lr_initial, tf.float32), [], name='learning_rate')
     set_lr_val(opt.lr_initial)
+
     dt.info(dt.DC.TRAIN, 'Initialize learning rate: initial {}, minimal {}, curve {}'
                              .format(opt.lr_initial, opt.lr_minimal, opt.lr_curve))
 
@@ -53,7 +59,7 @@ def is_chief():
 
 def init_summary(opt):
     # summary writer
-    opt.log_dir = opt.inst_dir + '/run-%02d%02d-%02d%02d' % tuple(time.localtime(time.time()))[1:5]
+    opt.log_dir = opt.args.inst_dir + '/run-%02d%02d-%02d%02d' % tuple(time.localtime(time.time()))[1:5]
     #opt.summary_writer = tf.summary.FileWriter(opt.log_dir)
 
 def _close_tqdm(opt):
@@ -69,23 +75,6 @@ def optim_func(loss, **kwargs):
 
     dt.debug(dt.DC.TRAIN, "[OPTIM] {}, lr {}, beta1 {}, beta2 {}, momentum {}, category {}, deferred {}"
                                  .format(opt.optim, opt.lr, opt.beta1, opt.beta2, opt.momentum, opt.catetory, opt.deferred))
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(1, 20, 5, 1)
-        self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4*4*50, 500)
-        self.fc2 = nn.Linear(500, 10)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 4*4*50)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return F.log_softmax(x, dim=1)
 
 def train(**kwargs):
 
@@ -106,13 +95,17 @@ def train(**kwargs):
                   tqdm=None)
 
     # stats
-    opt += dt.Opt(stats=dt.Opt(avg_loss=None, avg_acc=None))
+    opt += dt.Opt(stats=dt.Opt(avg_loss=None, avg_acc=None, train_speed=None))
 
     dt.info(dt.DC.TRAIN, '[TRAIN] opt')
     dt.print_pp(dt.opt_to_dict(opt))
 
     dt.info(dt.DC.TRAIN, '[HOROVOD] rank {}/{}, local {}'
                              .format(hvd.rank(), hvd.size(), hvd.local_rank()))
+
+    init_gs(opt)
+    init_lr(opt)
+    init_summary(opt)
 
     #if opt.summary_freq > 0:
     #    opt.summary_steps = opt.data.ep_size // opt.summary_freq
@@ -123,68 +116,102 @@ def train(**kwargs):
     est.build_estimator()
 
     device = est.device
-    #train_loader = est.data.train.loader
-    #valid_loader = est.data.valid.loader
+    train_loader = est.data.train.loader
+    valid_loader = est.data.valid.loader
     model = est.model
 
-    kwargs = {'num_workers': 1, 'pin_memory': True} if est.use_cuda else {}
-    print(kwargs)
-    train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('_asset/data/mnist', train=True, download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=opt.args.batch_size, shuffle=True, **kwargs)
-    valid_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('_asset/data/mnist', train=False, transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))
-                       ])),
-        batch_size=opt.args.valid_size, shuffle=True, **kwargs)
-    #model = Net().to(device)
-
     optimizer = optim.SGD(model.parameters(), lr=opt.lr_initial, momentum=opt.momentum)
+
+    # Hooks
+    train_hooks = dt.train.TrainCallGroup(opt)
+    t_hook = dt.train.TrainProgressHook(opt, every_n_steps=1, est=est, optimizer=optimizer)
+    t_hook_idx = train_hooks.add(t_hook)
+
+    valid_hooks = dt.train.TrainCallGroup(opt)
+    v_hook = dt.train.ValidProgressHook(opt, every_n_steps=1, est=est)
+    v_hook_idx = valid_hooks.add(v_hook)
 
     est.pre_train()
     train_start = time.time()
 
     #bcast_hook = hvd.BroadcastGlobalVariablesHook(0)
+    train_hooks.begin(train_start=train_start)
+    valid_hooks.begin(train_start=train_start)
+    for epoch in range(0, 10):
 
-    for epoch in range(1, 10 + 1):
-
+        train_hooks.pre_epoch(step=global_step(), epoch=epoch,
+                              train_loader=train_loader, valid_loader=valid_loader,
+                              epoch_size=est.data.train.num_batch,
+                              batch_size=est.data.train.batch_size)
         model.train()
+        train_loss = None
+        train_correct = 0
         for batch_idx, (data, target) in enumerate(train_loader):
+            train_hooks.pre_step(step=global_step(), epoch=epoch, batch=batch_idx,
+                                 train_loader=train_loader, valid_loader=valid_loader)
+
             data, target = data.to(device), target.to(device)
             optimizer.zero_grad()
             output = model(data)
-            loss = F.nll_loss(output, target)
-            loss.backward()
+            train_loss = F.nll_loss(output, target)
+            train_loss.backward()
             optimizer.step()
-            if batch_idx % 10 == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
+            pred = output.argmax(dim=1, keepdim=True)
+            train_correct = pred.eq(target.view_as(pred)).sum().item()
 
+            train_hooks.post_step(step=global_step(), epoch=epoch, batch=batch_idx,
+                                  train_loader=train_loader, valid_loader=valid_loader,
+                                  data=data, target=target,
+                                  output=output, loss=train_loss.item(), correct=train_correct)
 
-        model.eval()
-        test_loss = 0
-        correct = 0
-        with torch.no_grad():
-            for data, target in valid_loader:
-                data, target = data.to(device), target.to(device)
-                output = model(data)
-                test_loss += F.nll_loss(output, target, reduction='sum').item()
-                pred = output.argmax(dim=1, keepdim=True)
-                correct += pred.eq(target.view_as(pred)).sum().item()
+            #if (batch_idx+1) % 10 == 0:
+            #    print('Train Epoch: {} {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+            #        epoch, (batch_idx+1), (batch_idx+1) * len(data), len(train_loader.dataset),
+            #        100. * (batch_idx+1) / len(train_loader), loss.item()))
 
-        test_loss /= len(valid_loader.dataset)
+            global_step_inc()
 
-        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-            test_loss, correct, len(valid_loader.dataset),
-            100. * correct / len(valid_loader.dataset)))
+        train_hooks.post_epoch(step=global_step(), epoch=epoch,
+                               train_loader=train_loader, valid_loader=valid_loader)
+
+        if opt.validate_ep > 0 and (epoch+1) % opt.validate_ep == 0:
+            valid_hooks.pre_epoch(step=global_step(), epoch=epoch,
+                                  train_loader=train_loader, valid_loader=valid_loader,
+                                  epoch_size=est.data.valid.num_batch,
+                                  batch_size=est.data.valid.batch_size)
+            model.eval()
+            test_loss = 0
+            test_correct = 0
+            with torch.no_grad():
+                for batch_idx, (data, target) in enumerate(valid_loader):
+                    valid_hooks.pre_step(step=global_step(), epoch=epoch, batch=batch_idx,
+                                         train_loader=train_loader, valid_loader=valid_loader)
+
+                    data, target = data.to(device), target.to(device)
+                    output = model(data)
+                    test_loss += F.nll_loss(output, target, reduction='sum').item()
+                    pred = output.argmax(dim=1, keepdim=True)
+                    test_correct += pred.eq(target.view_as(pred)).sum().item()
+
+                    valid_hooks.post_step(step=global_step(), epoch=epoch, batch=batch_idx,
+                                          train_loader=train_loader, valid_loader=valid_loader,
+                                          data=data, target=target,
+                                          output=output, pred=pred,
+                                          loss=test_loss, correct=test_correct)
+
+            #test_loss /= len(valid_loader.dataset)
+
+            valid_hooks.post_epoch(step=global_step(), epoch=epoch,
+                                   train_loader=train_loader, valid_loader=valid_loader,
+                                   loss=test_loss, correct=test_correct)
+
+            #print('Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
+            #    test_loss, test_correct, len(valid_loader.dataset),
+            #    100. * test_correct / len(valid_loader.dataset)))
 
     train_end = time.time()
+    train_hooks.end(train_end=train_end)
+    valid_hooks.end()
     est.post_train()
     print(time.strftime("%H:%M:%S", time.gmtime(train_end - train_start)))
 
