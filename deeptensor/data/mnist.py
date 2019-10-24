@@ -55,6 +55,9 @@ class Mnist(data.BaseData):
         self.train.batch_size = self._batch_size
         self.valid.batch_size = self._valid_size
 
+        self.train.num_total = Mnist.TRAIN_NUM_PER_EPOCH
+        self.valid.num_total = Mnist.EVAL_NUM_PER_EPOCH
+
         self.train.num_batch = int(math.ceil(Mnist.TRAIN_NUM_PER_EPOCH / self._batch_size))
         self.valid.num_batch = int(math.ceil(Mnist.EVAL_NUM_PER_EPOCH / self._valid_size))
 

@@ -23,11 +23,6 @@ class TrainHook(dt.util.Callback):
         epoch = kwargs['epoch']
         return None
 
-    def post_epoch(self, **kwargs):
-        step = kwargs['step']
-        epoch = kwargs['epoch']
-        return None
-
     def pre_step(self, **kwargs):
         step = kwargs['step']
         epoch = kwargs['epoch']
@@ -38,6 +33,11 @@ class TrainHook(dt.util.Callback):
         step = kwargs['step']
         epoch = kwargs['epoch']
         batch = kwargs['batch']
+        return None
+
+    def post_epoch(self, **kwargs):
+        step = kwargs['step']
+        epoch = kwargs['epoch']
         return None
 
     def end(self, **kwargs):
@@ -56,22 +56,19 @@ class TrainProgressHook(TrainHook):
         self._batch_size = kwargs['batch_size']
         self._tqdm = tqdm(total=self._epoch_size, initial=0, desc='train', ncols=80, unit='b', leave=False)
         self._epoch_start = time.time()
-        return None
-
-    def post_epoch(self, **kwargs):
-        step = kwargs['step']
-        epoch = kwargs['epoch']
-        self._tqdm.close()
-        self._tqdm = None
-        self._ctx.stats.train_speed = (self._batch_size * self._epoch_size) / (time.time() - self._epoch_start)
+        self._num_total = 0
         return None
 
     def post_step(self, **kwargs):
         step = kwargs['step']
         epoch = kwargs['epoch']
         batch = kwargs['batch']
+        batch_size = kwargs['batch_size']
         loss = kwargs['loss']
         correct = kwargs['correct']
+
+        acc = correct / batch_size
+        self._num_total += batch_size
 
         # loss history update
         if loss is not None and \
@@ -84,11 +81,22 @@ class TrainProgressHook(TrainHook):
         # acc history update
         if correct is not None:
             if self._ctx.stats.avg_acc is None:
-                self._ctx.stats.avg_acc = correct/self._batch_size
+                self._ctx.stats.avg_acc = acc
             else:
-                self._ctx.stats.avg_acc = self._ctx.stats.avg_acc * 0.9 + correct/self._batch_size * 0.1
+                self._ctx.stats.avg_acc = self._ctx.stats.avg_acc * 0.9 + acc * 0.1
 
         self._tqdm.update(1)
+        return None
+
+    def post_epoch(self, **kwargs):
+        step = kwargs['step']
+        epoch = kwargs['epoch']
+        elapsed_time = time.time() - self._epoch_start
+
+        self._tqdm.close()
+        self._tqdm = None
+
+        self._ctx.stats.train_speed = self._num_total / elapsed_time
         return None
 
 
@@ -104,20 +112,31 @@ class ValidProgressHook(TrainHook):
         self._epoch_size = kwargs['epoch_size']
         self._batch_size = kwargs['batch_size']
         self._tqdm = tqdm(total=self._epoch_size, initial=0, desc='valid', ncols=80, unit='b', leave=False)
+        self._epoch_start = time.time()
+        self._num_total = 0
+        return None
+
+    def post_step(self, **kwargs):
+        step = kwargs['step']
+        epoch = kwargs['epoch']
+        batch = kwargs['batch']
+        batch_size = kwargs['batch_size']
+        self._num_total += batch_size
+        self._tqdm.update(1)
         return None
 
     def post_epoch(self, **kwargs):
         step = kwargs['step']
         epoch = kwargs['epoch']
-        train_loader = kwargs['train_loader']
-        valid_loader = kwargs['valid_loader']
         loss = kwargs['loss']
         correct = kwargs['correct']
 
-        elapsed_time = time.time() - self._train_start
+        elapsed_time = time.time() - self._epoch_start
 
         self._tqdm.close()
         self._tqdm = None
+
+        self._ctx.stats.valid_speed = self._num_total / elapsed_time
 
         if dt.train.is_chief():
             dt.info(dt.DC.TRAIN, '%s Epoch[%03d:lr=%.6f:gs=%06d] train (loss %s, acc %s), valid (loss %s, acc %s), %.3f img/s' %
@@ -125,16 +144,9 @@ class ValidProgressHook(TrainHook):
                                      (epoch+1), dt.train.get_lr_val(), step,
                                      ('NA' if self._ctx.stats.avg_loss is None else '%8.6f' % self._ctx.stats.avg_loss),
                                      ('NA' if self._ctx.stats.avg_acc is None else '%8.6f' % self._ctx.stats.avg_acc),
-                                     "{:.6f}".format(loss/len(valid_loader.dataset)),
-                                     "{:.6f}".format(correct/len(valid_loader.dataset)),
+                                     "{:.6f}".format(loss/self._num_total),
+                                     "{:.6f}".format(correct/self._num_total),
                                      self._ctx.stats.train_speed))
-        return None
-
-    def post_step(self, **kwargs):
-        step = kwargs['step']
-        epoch = kwargs['epoch']
-        batch = kwargs['batch']
-        self._tqdm.update(1)
         return None
 
 
