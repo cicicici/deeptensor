@@ -17,7 +17,6 @@ import time
 
 _global_step = None
 _learning_rate = None
-_lr_val = 0.1
 
 def global_step():
     global _global_step
@@ -33,15 +32,14 @@ def init_global_step(opt):
     _global_step = 0
 
 def set_lr_val(lr):
-    global _lr_val
-    _lr_val = lr
+    global _learning_rate
+    _learning_rate = lr
 
 def get_lr_val():
-    global _lr_val
-    return _lr_val
+    global _learning_rate
+    return _learning_rate
 
 def init_learning_rate(opt):
-    global _learning_rate
 
     set_lr_val(opt.lr_initial)
 
@@ -65,6 +63,18 @@ def optim_func(loss, **kwargs):
     dt.debug(dt.DC.TRAIN, "[OPTIM] {}, lr {}, beta1 {}, beta2 {}, momentum {}, category {}, deferred {}"
                                  .format(opt.optim, opt.lr, opt.beta1, opt.beta2, opt.momentum, opt.catetory, opt.deferred))
 
+def adjust_learning_rate(optimizer, lr):
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+def update_learning_rate(optimizer):
+    lr = get_lr_val()
+    adjust_learning_rate(optimizer, lr)
+
+def dump_learning_rate(optimizer):
+    for param_group in optimizer.param_groups:
+        print(param_group['lr'])
+
 def train(**kwargs):
 
     opt = dt.Opt(kwargs) + dt.get_ctx()
@@ -73,7 +83,7 @@ def train(**kwargs):
     opt += dt.Opt(is_training=True, is_eval=False, is_pred=False)
 
     # Learning rate
-    opt += dt.Opt(lr_initial=0.001, lr_minimal=1e-6, lr_curve=[[0.1, 10, 1]])
+    opt += dt.Opt(lr_initial=0.001, lr_minimal=1e-6, lr_curve=[['*', 0.1, 10, 1]])
 
     # Default training options
     opt += dt.Opt(optim='MaxProp', beta1=0.9, beta2=0.99, momentum=0.9, category='',
@@ -112,10 +122,11 @@ def train(**kwargs):
     model = est.model
 
     # Optimizer
-    optimizer = optim.SGD(model.parameters(), lr=opt.lr_initial, momentum=opt.momentum)
+    optimizer = optim.SGD(model.parameters(), lr=get_lr_val(), momentum=opt.momentum)
 
     # Hooks
     train_hooks = dt.train.TrainCallGroup(opt)
+    train_hooks.add(dt.train.LearningRateHook(opt, lr_val=get_lr_val(), lr_minimal=opt.lr_minimal, lr_curve=opt.lr_curve, optimizer=optimizer))
     train_hooks.add(dt.train.TrainProgressHook(opt, every_n_steps=1))
 
     valid_hooks = dt.train.TrainCallGroup(opt)
@@ -137,6 +148,7 @@ def train(**kwargs):
         opt.is_eval = False
         train_loss = None
         train_correct = 0
+
         for batch_idx, (data, target) in enumerate(train_loader):
             train_hooks.pre_step(step=global_step(), epoch=epoch, batch=batch_idx)
 
