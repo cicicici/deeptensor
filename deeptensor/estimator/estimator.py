@@ -16,12 +16,14 @@ class BaseEstimator(object):
     def __init__(self, opt, cfg):
         self.tag = "EST::BASE"
         dt.trace(dt.DC.MODEL, "[{}] ({}) __init__".format(self.tag, type(self).__name__))
-        self._opt = opt
+        self._ctx = opt
         self._cfg = cfg
 
         self._data = None
         self._model = None
-        self._loss = None
+        self._optimizer = None
+        self._train_hooks = []
+        self._valid_hooks = []
 
         self._use_cuda = not cfg.no_cuda and torch.cuda.is_available()
         self._device = torch.device("cuda" if self._use_cuda else "cpu")
@@ -51,8 +53,16 @@ class BaseEstimator(object):
         return self._model
 
     @property
-    def loss(self):
-        return self._loss
+    def optimizer(self):
+        return self._optimizer
+
+    @property
+    def train_hooks(self):
+        return self._train_hooks
+
+    @property
+    def valid_hooks(self):
+        return self._valid_hooks
 
     # Abstract
     @abstractmethod
@@ -72,20 +82,36 @@ class BaseEstimator(object):
         return None
 
     @abstractmethod
+    def build_optimizer(self):
+        return None
+
+    @abstractmethod
+    def build_hooks(self):
+        return None
+
+    @abstractmethod
     def forward(self, tensor, is_training):
         return None
 
     @abstractmethod
-    def define_loss(self, logits, labels, is_training):
+    def loss(self, logits, labels, is_training):
         return None
 
     @abstractmethod
-    def define_validation(self):
+    def pred(self, logits, is_training):
         return None
 
-    # Hooks
-    def build_train_hooks(self, is_chief):
-        return []
+    @abstractmethod
+    def correct(self, logits, labels, is_training):
+        return None
+
+    @abstractmethod
+    def acc(self, logits, labels, is_training):
+        return None
+
+    @abstractmethod
+    def validation(self):
+        return None
 
     def pre_train(self):
         return False
@@ -98,13 +124,9 @@ class BaseEstimator(object):
         self.build_data()
         self.load_data()
         self.build_model()
+        self.build_optimizer()
+        self.build_hooks()
         return self
-
-    def train(self):
-        return None
-
-    def evaluate(self):
-        return None
 
     def inference(self, tensor, checkpoint, batch_size=None):
         return None

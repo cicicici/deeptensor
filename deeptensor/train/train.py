@@ -115,21 +115,16 @@ def train(**kwargs):
     est = opt.est_class(opt, opt.est_cfg)
     est.build_estimator()
 
-    # Local variables
-    device = est.device
-    train_loader = est.data.train.loader
-    valid_loader = est.data.valid.loader
-    model = est.model
-
-    # Optimizer
-    optimizer = optim.SGD(model.parameters(), lr=get_lr_val(), momentum=opt.momentum)
-
     # Hooks
     train_hooks = dt.train.TrainCallGroup(opt)
-    train_hooks.add(dt.train.LearningRateHook(opt, lr_val=get_lr_val(), lr_minimal=opt.lr_minimal, lr_curve=opt.lr_curve, optimizer=optimizer))
+    train_hooks.add(dt.train.LearningRateHook(opt, lr_val=get_lr_val(), lr_minimal=opt.lr_minimal, lr_curve=opt.lr_curve, optimizer=est.optimizer))
+    for hook in est.train_hooks:
+        train_hooks.add(hook)
     train_hooks.add(dt.train.TrainProgressHook(opt, every_n_steps=1))
 
     valid_hooks = dt.train.TrainCallGroup(opt)
+    for hook in est.valid_hooks:
+        valid_hooks.add(hook)
     valid_hooks.add(dt.train.ValidProgressHook(opt, every_n_steps=1))
 
     # Training
@@ -138,52 +133,58 @@ def train(**kwargs):
     train_hooks.begin(train_start=train_start)
     valid_hooks.begin(train_start=train_start)
 
+    # Local variables
+    train_loader = est.data.train.loader
+    valid_loader = est.data.valid.loader
+
     for epoch in range(0, opt.max_ep):
+
+        # Train
+        est.model.train()
+        opt.is_training = True
+        opt.is_eval = False
 
         train_hooks.pre_epoch(step=global_step(), epoch=epoch,
                               epoch_size=est.data.train.num_batch,
                               batch_size=est.data.train.batch_size)
-        model.train()
-        opt.is_training = True
-        opt.is_eval = False
 
         for index, (data, target) in enumerate(train_loader):
             size = len(data)
             train_hooks.pre_step(step=global_step(), epoch=epoch,
                                  index=index, size=size)
 
-            data, target = data.to(device), target.to(device)
+            data, target = data.to(est.device), target.to(est.device)
 
-            optimizer.zero_grad()
+            est.optimizer.zero_grad()
 
-            output = model(data)
+            output = est.forward(data, opt.is_training)
 
-            loss = F.nll_loss(output, target)
+            loss = est.loss(output, target, opt.is_training)
+
             loss.backward()
+            est.optimizer.step()
 
-            optimizer.step()
-
-            pred = output.argmax(dim=1, keepdim=True)
-            correct = pred.eq(target.view_as(pred))
-            acc = correct.sum().item() / size
+            acc = est.acc(output, target, opt.is_training)
 
             train_hooks.post_step(step=global_step(), epoch=epoch,
                                   index=index, size=size,
                                   data=data, target=target,
-                                  output=output, pred=pred,
-                                  loss=loss, acc=acc)
+                                  output=output, loss=loss, acc=acc)
 
             global_step_inc()
 
         train_hooks.post_epoch(step=global_step(), epoch=epoch)
 
+        # Validation
         if opt.validate_ep > 0 and (epoch+1) % opt.validate_ep == 0:
+
+            est.model.eval()
+            opt.is_training = False
+            opt.is_eval = True
+
             valid_hooks.pre_epoch(step=global_step(), epoch=epoch,
                                   epoch_size=est.data.valid.num_batch,
                                   batch_size=est.data.valid.batch_size)
-            model.eval()
-            opt.is_training = False
-            opt.is_eval = True
 
             with torch.no_grad():
                 for index, (data, target) in enumerate(valid_loader):
@@ -191,21 +192,18 @@ def train(**kwargs):
                     valid_hooks.pre_step(step=global_step(), epoch=epoch,
                                          index=index, size=size)
 
-                    data, target = data.to(device), target.to(device)
+                    data, target = data.to(est.device), target.to(est.device)
 
-                    output = model(data)
+                    output = est.forward(data, opt.is_training)
 
-                    loss = F.nll_loss(output, target)
+                    loss = est.loss(output, target, opt.is_training)
 
-                    pred = output.argmax(dim=1, keepdim=True)
-                    correct = pred.eq(target.view_as(pred))
-                    acc = correct.sum().item() / size
+                    acc = est.acc(output, target, opt.is_training)
 
                     valid_hooks.post_step(step=global_step(), epoch=epoch,
                                           index=index, size=size,
                                           data=data, target=target,
-                                          output=output, pred=pred,
-                                          loss=loss, acc=acc)
+                                          output=output, loss=loss, acc=acc)
 
             valid_hooks.post_epoch(step=global_step(), epoch=epoch)
 

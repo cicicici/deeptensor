@@ -180,6 +180,9 @@ class LearningRateHook(TrainHook):
                 else:
                     raise ValueError('The first element of lr curve segment must be (*,+,-,/,=)')
 
+                if self._lr_val < self._lr_minimal:
+                    self._lr_val = self._lr_minimal
+
                 dt.train.set_lr_val(self._lr_val)
                 dt.train.update_learning_rate(self._optimizer)
 

@@ -40,7 +40,7 @@ class MnistEstimator(dt.estimator.ClassEstimator):
 
     def build_data(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build data".format(self.tag, type(self).__name__))
-        args = self._opt.args
+        args = self._ctx.args
         self._data = dt.data.Mnist(batch_size=args.batch_size, valid_size=args.valid_size,
                                    num_workers=1, pin_memory=self.use_cuda).init_data()
         return True
@@ -51,6 +51,7 @@ class MnistEstimator(dt.estimator.ClassEstimator):
         self._model = Net().to(self.device)
 
         return True
+
 
 # Train
 with dt.ctx(optim=ARGS.optim, lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve):

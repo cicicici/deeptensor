@@ -4,6 +4,9 @@ from __future__ import print_function
 
 import deeptensor as dt
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 
 from deeptensor.estimator import estimator as estimator
 
@@ -19,7 +22,7 @@ class ClassEstimator(estimator.BaseEstimator):
         return None
 
     def build_data(self):
-        args = self._opt.args
+        args = self._ctx.args
 
         # Params
         # args.batch_size
@@ -29,8 +32,7 @@ class ClassEstimator(estimator.BaseEstimator):
         # data_format
 
         self._data = None
-
-        return True
+        return False
 
     def load_data(self):
         self.data.load_data()
@@ -53,35 +55,37 @@ class ClassEstimator(estimator.BaseEstimator):
         self._model = None
         return False
 
+    def build_optimizer(self):
+        self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(), momentum=self._ctx.momentum)
+        return True
+
+    def build_hooks(self):
+        return True
+
     def forward(self, tensor, is_training):
-        args = self._opt.args
         logits = self._model(tensor)
         return logits
 
-    def define_loss(self, logits, labels, is_training):
-        # Params
-        # softmax
-
-        loss = None # dt.loss.ce(logits, target=labels, softmax=False)
+    def loss(self, logits, labels, is_training):
+        loss = F.nll_loss(logits, labels)
         return loss
 
-    def define_validation(self):
-        valid_metric = []
-        args = self._opt.args
-        #if args.validate_ep > 0:
-        #    vx = self._opt.data.vx
-        #    vy = self._opt.data.vy
-            # May not need this ctx line
-        #    with dt.ctx(is_training=False, reuse=True, summary=False):
-        #        logits_val = self.forward(vx, False, reuse=True)
-        #    loss_val = dt.loss.ce(logits_val, target=vy, softmax=False)
-        #    soft_val = dt.activation.softmax(logits_val)
-        #    acc1_val = tf.reduce_mean(dt.metric.accuracy(soft_val, target=vy), name='acc1')
-        #    valid_metric.append(dt.Opt(name='valid', ops=[loss_val, acc1_val], cnt=self._opt.data.v_ep_size))
-        return valid_metric
+    def pred(self, logits, is_training):
+        pred = logits.argmax(dim=1, keepdim=True)
+        return pred
+
+    def correct(self, logits, labels, is_training):
+        pred = self.pred(logits, is_training)
+        correct = pred.eq(labels.view_as(pred))
+        return correct
+
+    def acc(self, logits, labels, is_training):
+        correct = self.correct(logits, labels, is_training)
+        acc = correct.sum().item() / len(labels)
+        return acc
 
     def pre_train(self):
-        dt.info(dt.DC.TRAIN, '[{}] device: {}'.format(self.tag, self._device))
+        dt.info(dt.DC.TRAIN, 'pre train [{}] device: {}'.format(self.tag, self._device))
         return None
 
     def post_train(self):
