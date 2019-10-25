@@ -147,25 +147,30 @@ def train(**kwargs):
         opt.is_training = True
         opt.is_eval = False
         train_loss = None
-        train_correct = 0
+        train_correct = None
 
         for batch_idx, (data, target) in enumerate(train_loader):
             train_hooks.pre_step(step=global_step(), epoch=epoch, batch=batch_idx)
 
             data, target = data.to(device), target.to(device)
+
             optimizer.zero_grad()
+
             output = model(data)
+
             train_loss = F.nll_loss(output, target)
             train_loss.backward()
+
             optimizer.step()
+
             pred = output.argmax(dim=1, keepdim=True)
-            train_correct = pred.eq(target.view_as(pred)).sum().item()
+            train_correct = pred.eq(target.view_as(pred))
 
             train_hooks.post_step(step=global_step(), epoch=epoch,
                                   batch=batch_idx, batch_size=len(data),
                                   data=data, target=target,
                                   output=output, pred=pred,
-                                  loss=train_loss.item(), correct=train_correct)
+                                  loss=train_loss, correct=train_correct)
 
             global_step_inc()
 
@@ -178,17 +183,20 @@ def train(**kwargs):
             model.eval()
             opt.is_training = False
             opt.is_eval = True
-            test_loss = 0
-            test_correct = 0
+            test_loss = None
+            test_correct = None
             with torch.no_grad():
                 for batch_idx, (data, target) in enumerate(valid_loader):
                     valid_hooks.pre_step(step=global_step(), epoch=epoch, batch=batch_idx)
 
                     data, target = data.to(device), target.to(device)
+
                     output = model(data)
-                    test_loss += F.nll_loss(output, target, reduction='sum').item()
+
+                    test_loss = F.nll_loss(output, target)
+
                     pred = output.argmax(dim=1, keepdim=True)
-                    test_correct += pred.eq(target.view_as(pred)).sum().item()
+                    test_correct = pred.eq(target.view_as(pred))
 
                     valid_hooks.post_step(step=global_step(), epoch=epoch,
                                           batch=batch_idx, batch_size=len(data),
@@ -196,12 +204,11 @@ def train(**kwargs):
                                           output=output, pred=pred,
                                           loss=test_loss, correct=test_correct)
 
-            valid_hooks.post_epoch(step=global_step(), epoch=epoch,
-                                   loss=test_loss, correct=test_correct)
+            valid_hooks.post_epoch(step=global_step(), epoch=epoch)
 
     train_end = time.time()
     train_hooks.end(train_end=train_end)
-    valid_hooks.end()
+    valid_hooks.end(train_end=train_end)
     est.post_train()
 
     # Save model

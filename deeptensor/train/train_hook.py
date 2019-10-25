@@ -63,22 +63,23 @@ class TrainProgressHook(TrainHook):
         loss = kwargs['loss']
         correct = kwargs['correct']
 
-        acc = correct / batch_size
         self._num_total += batch_size
 
         # loss history update
-        if loss is not None and not np.isnan(loss) and not np.isinf(loss):
-            if self._ctx.stats.avg_loss is None:
-                self._ctx.stats.avg_loss = loss
-            else:
-                self._ctx.stats.avg_loss = self._ctx.stats.avg_loss * 0.9 + loss * 0.1
+        loss_val = loss.item()
+        if not np.isnan(loss_val) and not np.isinf(loss_val):
+             if self._ctx.stats.avg_loss is None:
+                self._ctx.stats.avg_loss = loss_val
+             else:
+                self._ctx.stats.avg_loss = self._ctx.stats.avg_loss * 0.9 + loss_val * 0.1
 
         # acc history update
-        if correct is not None:
-            if self._ctx.stats.avg_acc is None:
-                self._ctx.stats.avg_acc = acc
-            else:
-                self._ctx.stats.avg_acc = self._ctx.stats.avg_acc * 0.9 + acc * 0.1
+        correct_val = correct.sum().item()
+        acc = correct_val / batch_size
+        if self._ctx.stats.avg_acc is None:
+            self._ctx.stats.avg_acc = acc
+        else:
+            self._ctx.stats.avg_acc = self._ctx.stats.avg_acc * 0.9 + acc * 0.1
 
         self._tqdm.update(1)
 
@@ -107,13 +108,20 @@ class ValidProgressHook(TrainHook):
         self._tqdm = tqdm(total=self._epoch_size, initial=0, desc='valid', ncols=80, unit='b', leave=False)
         self._epoch_start = time.time()
         self._num_total = 0
+        self._loss_total = 0
+        self._correct_total = 0
 
         return None
 
     def post_step(self, **kwargs):
         batch_size = kwargs['batch_size']
+        loss = kwargs['loss']
+        correct = kwargs['correct']
 
         self._num_total += batch_size
+        self._loss_total += loss.item() * batch_size
+        self._correct_total += correct.sum().item()
+
         self._tqdm.update(1)
 
         return None
@@ -121,8 +129,6 @@ class ValidProgressHook(TrainHook):
     def post_epoch(self, **kwargs):
         step = kwargs['step']
         epoch = kwargs['epoch']
-        loss = kwargs['loss']
-        correct = kwargs['correct']
 
         now_time = time.time()
 
@@ -137,8 +143,8 @@ class ValidProgressHook(TrainHook):
                                      (epoch+1), dt.train.get_lr_val(), step,
                                      ('NA' if self._ctx.stats.avg_loss is None else '%8.6f' % self._ctx.stats.avg_loss),
                                      ('NA' if self._ctx.stats.avg_acc is None else '%8.6f' % self._ctx.stats.avg_acc),
-                                     "{:.6f}".format(loss/self._num_total),
-                                     "{:.6f}".format(correct/self._num_total),
+                                     "{:.6f}".format(self._loss_total/self._num_total),
+                                     "{:.6f}".format(self._correct_total/self._num_total),
                                      self._ctx.stats.train_speed))
         return None
 
