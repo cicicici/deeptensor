@@ -59,11 +59,11 @@ class TrainProgressHook(TrainHook):
         return None
 
     def post_step(self, **kwargs):
-        batch_size = kwargs['batch_size']
+        size = kwargs['size']
         loss = kwargs['loss']
-        correct = kwargs['correct']
+        acc = kwargs['acc']
 
-        self._num_total += batch_size
+        self._num_total += size
 
         # loss history update
         loss_val = loss.item()
@@ -74,8 +74,6 @@ class TrainProgressHook(TrainHook):
                 self._ctx.stats.avg_loss = self._ctx.stats.avg_loss * 0.9 + loss_val * 0.1
 
         # acc history update
-        correct_val = correct.sum().item()
-        acc = correct_val / batch_size
         if self._ctx.stats.avg_acc is None:
             self._ctx.stats.avg_acc = acc
         else:
@@ -109,18 +107,18 @@ class ValidProgressHook(TrainHook):
         self._epoch_start = time.time()
         self._num_total = 0
         self._loss_total = 0
-        self._correct_total = 0
+        self._acc_total = 0
 
         return None
 
     def post_step(self, **kwargs):
-        batch_size = kwargs['batch_size']
+        size = kwargs['size']
         loss = kwargs['loss']
-        correct = kwargs['correct']
+        acc = kwargs['acc']
 
-        self._num_total += batch_size
-        self._loss_total += loss.item() * batch_size
-        self._correct_total += correct.sum().item()
+        self._num_total += size
+        self._loss_total += loss.item() * size
+        self._acc_total += acc * size
 
         self._tqdm.update(1)
 
@@ -144,7 +142,7 @@ class ValidProgressHook(TrainHook):
                                      ('NA' if self._ctx.stats.avg_loss is None else '%8.6f' % self._ctx.stats.avg_loss),
                                      ('NA' if self._ctx.stats.avg_acc is None else '%8.6f' % self._ctx.stats.avg_acc),
                                      "{:.6f}".format(self._loss_total/self._num_total),
-                                     "{:.6f}".format(self._correct_total/self._num_total),
+                                     "{:.6f}".format(self._acc_total/self._num_total),
                                      self._ctx.stats.train_speed))
         return None
 

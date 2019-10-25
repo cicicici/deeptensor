@@ -146,11 +146,11 @@ def train(**kwargs):
         model.train()
         opt.is_training = True
         opt.is_eval = False
-        train_loss = None
-        train_correct = None
 
-        for batch_idx, (data, target) in enumerate(train_loader):
-            train_hooks.pre_step(step=global_step(), epoch=epoch, batch=batch_idx)
+        for index, (data, target) in enumerate(train_loader):
+            size = len(data)
+            train_hooks.pre_step(step=global_step(), epoch=epoch,
+                                 index=index, size=size)
 
             data, target = data.to(device), target.to(device)
 
@@ -158,19 +158,20 @@ def train(**kwargs):
 
             output = model(data)
 
-            train_loss = F.nll_loss(output, target)
-            train_loss.backward()
+            loss = F.nll_loss(output, target)
+            loss.backward()
 
             optimizer.step()
 
             pred = output.argmax(dim=1, keepdim=True)
-            train_correct = pred.eq(target.view_as(pred))
+            correct = pred.eq(target.view_as(pred))
+            acc = correct.sum().item() / size
 
             train_hooks.post_step(step=global_step(), epoch=epoch,
-                                  batch=batch_idx, batch_size=len(data),
+                                  index=index, size=size,
                                   data=data, target=target,
                                   output=output, pred=pred,
-                                  loss=train_loss, correct=train_correct)
+                                  loss=loss, acc=acc)
 
             global_step_inc()
 
@@ -183,26 +184,28 @@ def train(**kwargs):
             model.eval()
             opt.is_training = False
             opt.is_eval = True
-            test_loss = None
-            test_correct = None
+
             with torch.no_grad():
-                for batch_idx, (data, target) in enumerate(valid_loader):
-                    valid_hooks.pre_step(step=global_step(), epoch=epoch, batch=batch_idx)
+                for index, (data, target) in enumerate(valid_loader):
+                    size = len(data)
+                    valid_hooks.pre_step(step=global_step(), epoch=epoch,
+                                         index=index, size=size)
 
                     data, target = data.to(device), target.to(device)
 
                     output = model(data)
 
-                    test_loss = F.nll_loss(output, target)
+                    loss = F.nll_loss(output, target)
 
                     pred = output.argmax(dim=1, keepdim=True)
-                    test_correct = pred.eq(target.view_as(pred))
+                    correct = pred.eq(target.view_as(pred))
+                    acc = correct.sum().item() / size
 
                     valid_hooks.post_step(step=global_step(), epoch=epoch,
-                                          batch=batch_idx, batch_size=len(data),
+                                          index=index, size=size,
                                           data=data, target=target,
                                           output=output, pred=pred,
-                                          loss=test_loss, correct=test_correct)
+                                          loss=loss, acc=acc)
 
             valid_hooks.post_epoch(step=global_step(), epoch=epoch)
 
