@@ -61,7 +61,7 @@ class TrainProgressHook(TrainHook):
     def post_step(self, **kwargs):
         size = kwargs['size']
         loss = kwargs['loss']
-        acc = kwargs['acc']
+        metric = kwargs['metric']
 
         self._num_total += size
 
@@ -73,11 +73,13 @@ class TrainProgressHook(TrainHook):
              else:
                 self._ctx.stats.avg_loss = self._ctx.stats.avg_loss * 0.9 + loss_val * 0.1
 
-        # acc history update
-        if self._ctx.stats.avg_acc is None:
-            self._ctx.stats.avg_acc = acc
+        # primary metric history update
+        if self._ctx.stats.pri_metric_name is None:
+            self._ctx.stats.pri_metric_name = metric[0].name
+        if self._ctx.stats.pri_metric is None:
+            self._ctx.stats.pri_metric = metric[0].value
         else:
-            self._ctx.stats.avg_acc = self._ctx.stats.avg_acc * 0.9 + acc * 0.1
+            self._ctx.stats.pri_metric = self._ctx.stats.pri_metric * 0.9 + metric[0].value * 0.1
 
         self._tqdm.update(1)
 
@@ -107,18 +109,23 @@ class ValidProgressHook(TrainHook):
         self._epoch_start = time.time()
         self._num_total = 0
         self._loss_total = 0
-        self._acc_total = 0
+        self._metric_total = [0, 0]
+        self._metric_name = [None, None]
 
         return None
 
     def post_step(self, **kwargs):
         size = kwargs['size']
         loss = kwargs['loss']
-        acc = kwargs['acc']
+        metric = kwargs['metric']
 
         self._num_total += size
         self._loss_total += loss.item() * size
-        self._acc_total += acc * size
+
+        for i, val in enumerate(metric):
+            if self._metric_name[i] is None:
+                self._metric_name[i] = metric[i].name
+            self._metric_total[i] += metric[i].value * size
 
         self._tqdm.update(1)
 
@@ -136,13 +143,15 @@ class ValidProgressHook(TrainHook):
         self._ctx.stats.valid_speed = self._num_total / (now_time - self._epoch_start)
 
         if dt.train.is_chief():
-            dt.info(dt.DC.TRAIN, '%s Epoch[%03d:lr=%.6f:gs=%06d] train (loss %s, acc %s), valid (loss %s, acc %s), %.3f img/s' %
+            dt.info(dt.DC.TRAIN, '%s Epoch[%03d:lr=%.6f:gs=%06d] train (loss %s, %s %s), valid (loss %s, %s %s, %s %s), %.3f img/s' %
                                      (time.strftime("%H:%M:%S", time.gmtime(now_time - self._train_start)),
                                      (epoch+1), dt.train.get_lr_val(), step,
                                      ('NA' if self._ctx.stats.avg_loss is None else '%8.6f' % self._ctx.stats.avg_loss),
-                                     ('NA' if self._ctx.stats.avg_acc is None else '%8.6f' % self._ctx.stats.avg_acc),
+                                     self._ctx.stats.pri_metric_name,
+                                     ('NA' if self._ctx.stats.pri_metric is None else '%8.6f' % self._ctx.stats.pri_metric),
                                      "{:.6f}".format(self._loss_total/self._num_total),
-                                     "{:.6f}".format(self._acc_total/self._num_total),
+                                     self._metric_name[0], "{:.6f}".format(self._metric_total[0]/self._num_total),
+                                     self._metric_name[1], "{:.6f}".format(self._metric_total[1]/self._num_total),
                                      self._ctx.stats.train_speed))
         return None
 

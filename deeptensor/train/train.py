@@ -93,7 +93,7 @@ def train(**kwargs):
                   valid_metric=[], validate_ep=0, data_format=dt.dformat.DEFAULT)
 
     # Stats
-    opt += dt.Opt(stats=dt.Opt(avg_loss=None, avg_acc=None, train_speed=None, valid_speed=None))
+    opt += dt.Opt(stats=dt.Opt(avg_loss=None, pri_metric_name=None, pri_metric=None, train_speed=None, valid_speed=None))
 
     dt.info(dt.DC.TRAIN, '[TRAIN] opt')
     dt.print_pp(dt.opt_to_dict(opt))
@@ -163,12 +163,12 @@ def train(**kwargs):
             loss.backward()
             est.optimizer.step()
 
-            acc = est.acc(output, target, opt.is_training)
+            metric = est.metric(output, target, opt.is_training)
 
             train_hooks.post_step(step=global_step(), epoch=epoch,
                                   index=index, size=size,
                                   data=data, target=target,
-                                  output=output, loss=loss, acc=acc)
+                                  output=output, loss=loss, metric=metric)
 
             global_step_inc()
 
@@ -197,12 +197,12 @@ def train(**kwargs):
 
                     loss = est.criterion(output, target)
 
-                    acc = est.acc(output, target, opt.is_training)
+                    metric = est.metric(output, target, opt.is_training)
 
                     valid_hooks.post_step(step=global_step(), epoch=epoch,
                                           index=index, size=size,
                                           data=data, target=target,
-                                          output=output, loss=loss, acc=acc)
+                                          output=output, loss=loss, metric=metric)
 
             valid_hooks.post_epoch(step=global_step(), epoch=epoch)
 

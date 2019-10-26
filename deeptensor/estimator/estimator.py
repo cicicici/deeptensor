@@ -107,7 +107,7 @@ class BaseEstimator(object):
         return None
 
     @abstractmethod
-    def acc(self, logits, labels, is_training):
+    def metric(self, logits, labels, is_training):
         return None
 
     @abstractmethod
