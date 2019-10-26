@@ -155,12 +155,11 @@ def train(**kwargs):
 
             data, target = data.to(est.device), target.to(est.device)
 
-            est.optimizer.zero_grad()
-
             output = est.forward(data, opt.is_training)
 
             loss = est.loss(output, target, opt.is_training)
 
+            est.optimizer.zero_grad()
             loss.backward()
             est.optimizer.step()
 

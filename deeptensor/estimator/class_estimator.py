@@ -55,6 +55,10 @@ class ClassEstimator(estimator.BaseEstimator):
         self._model = None
         return False
 
+    def build_criterion(self):
+        self._criterion = nn.CrossEntropyLoss()
+        return False
+
     def build_optimizer(self):
         self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(), momentum=self._ctx.momentum)
         return True

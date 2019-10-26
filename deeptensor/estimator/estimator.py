@@ -21,6 +21,7 @@ class BaseEstimator(object):
 
         self._data = None
         self._model = None
+        self._criterion = None
         self._optimizer = None
         self._train_hooks = []
         self._valid_hooks = []
@@ -53,6 +54,10 @@ class BaseEstimator(object):
         return self._model
 
     @property
+    def criterion(self):
+        return self._criterion
+
+    @property
     def optimizer(self):
         return self._optimizer
 
@@ -82,6 +87,10 @@ class BaseEstimator(object):
         return None
 
     @abstractmethod
+    def build_criterion(self):
+        return None
+
+    @abstractmethod
     def build_optimizer(self):
         return None
 
@@ -91,10 +100,6 @@ class BaseEstimator(object):
 
     @abstractmethod
     def forward(self, tensor, is_training):
-        return None
-
-    @abstractmethod
-    def loss(self, logits, labels, is_training):
         return None
 
     @abstractmethod
@@ -124,6 +129,7 @@ class BaseEstimator(object):
         self.build_data()
         self.load_data()
         self.build_model()
+        self.build_criterion()
         self.build_optimizer()
         self.build_hooks()
         return self
