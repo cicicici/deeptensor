@@ -22,7 +22,7 @@ class ClassEstimator(estimator.BaseEstimator):
         return None
 
     def build_data(self):
-        args = self._ctx.args
+        #args = self._ctx.args
 
         # Params
         # args.batch_size
@@ -33,10 +33,6 @@ class ClassEstimator(estimator.BaseEstimator):
 
         self._data = None
         return False
-
-    def load_data(self):
-        self.data.load_data()
-        return True
 
     def build_model(self):
         # Params
@@ -57,7 +53,12 @@ class ClassEstimator(estimator.BaseEstimator):
 
     def build_criterion(self):
         self._criterion = nn.CrossEntropyLoss()
-        return False
+
+        #def nll_loss_fn(logits, labels):
+        #    return F.nll_loss(F.log_softmax(logits, dim=1), labels)
+        #self._criterion = nll_loss_fn
+
+        return True
 
     def build_optimizer(self):
         self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(), momentum=self._ctx.momentum)

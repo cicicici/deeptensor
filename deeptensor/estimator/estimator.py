@@ -79,10 +79,6 @@ class BaseEstimator(object):
         return None
 
     @abstractmethod
-    def load_data(self):
-        return None
-
-    @abstractmethod
     def build_model(self):
         return None
 
@@ -127,7 +123,6 @@ class BaseEstimator(object):
     # Core
     def build_estimator(self):
         self.build_data()
-        self.load_data()
         self.build_model()
         self.build_criterion()
         self.build_optimizer()

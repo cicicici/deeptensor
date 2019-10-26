@@ -30,7 +30,7 @@ class Net(nn.Module):
         x = x.view(-1, 4*4*50)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
-        return F.log_softmax(x, dim=1)
+        return x
 
 class MnistEstimator(dt.estimator.ClassEstimator):
     def __init__(self, opt, cfg):
@@ -41,8 +41,11 @@ class MnistEstimator(dt.estimator.ClassEstimator):
     def build_data(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build data".format(self.tag, type(self).__name__))
         args = self._ctx.args
-        self._data = dt.data.Mnist(batch_size=args.batch_size, valid_size=args.valid_size,
-                                   num_workers=1, pin_memory=self.use_cuda).init_data()
+        data = dt.data.Mnist(batch_size=args.batch_size, valid_size=args.valid_size,
+                             num_workers=1, pin_memory=self.use_cuda)
+        data.init_data()
+        data.load_data()
+        self._data = data
         return True
 
     def build_model(self):

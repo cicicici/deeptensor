@@ -157,7 +157,7 @@ def train(**kwargs):
 
             output = est.forward(data, opt.is_training)
 
-            loss = est.loss(output, target, opt.is_training)
+            loss = est.criterion(output, target)
 
             est.optimizer.zero_grad()
             loss.backward()
@@ -195,7 +195,7 @@ def train(**kwargs):
 
                     output = est.forward(data, opt.is_training)
 
-                    loss = est.loss(output, target, opt.is_training)
+                    loss = est.criterion(output, target)
 
                     acc = est.acc(output, target, opt.is_training)
 
