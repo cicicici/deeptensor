@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
+from torch.utils.tensorboard import SummaryWriter
 
 import horovod.torch as hvd
 
@@ -52,7 +53,8 @@ def is_chief():
 def init_summary(opt):
     # summary writer
     opt.log_dir = opt.args.inst_dir + '/run-%02d%02d-%02d%02d' % tuple(time.localtime(time.time()))[1:5]
-    #opt.summary_writer = tf.summary.FileWriter(opt.log_dir)
+    opt.summary_writer = SummaryWriter(opt.log_dir)
+    dt.vis.set_default_writer(opt.summary_writer)
 
 def optim_func(loss, **kwargs):
     opt = dt.Opt(kwargs)
@@ -115,6 +117,15 @@ def train(**kwargs):
     est = opt.est_class(opt, opt.est_cfg)
     est.build_estimator()
 
+    # Local variables
+    train_loader = est.data.train.loader
+    valid_loader = est.data.valid.loader
+
+    # Save graph
+    images, labels = next(iter(train_loader))
+    dt.vis.add_graph(est.model, images)
+    dt.vis.add_image_grid('model/inputs', images)
+
     # Hooks
     train_hooks = dt.train.TrainCallGroup(opt)
     train_hooks.add(dt.train.LearningRateHook(opt, lr_val=get_lr_val(), lr_minimal=opt.lr_minimal, lr_curve=opt.lr_curve, optimizer=est.optimizer))
@@ -129,13 +140,10 @@ def train(**kwargs):
 
     # Training
     est.pre_train()
+
     train_start = time.time()
     train_hooks.begin(train_start=train_start)
     valid_hooks.begin(train_start=train_start)
-
-    # Local variables
-    train_loader = est.data.train.loader
-    valid_loader = est.data.valid.loader
 
     for epoch in range(0, opt.max_ep):
 
@@ -147,28 +155,30 @@ def train(**kwargs):
         train_hooks.pre_epoch(step=global_step(), epoch=epoch,
                               epoch_size=est.data.train.num_batch,
                               batch_size=est.data.train.batch_size)
+        dt.vis.add_scalar('train/epoch', epoch+1)
+        dt.vis.add_scalar('train/lr', get_lr_val())
 
-        for index, (data, target) in enumerate(train_loader):
-            size = len(data)
+        for index, (images, labels) in enumerate(train_loader):
+            size = len(images)
             train_hooks.pre_step(step=global_step(), epoch=epoch,
                                  index=index, size=size)
 
-            data, target = data.to(est.device), target.to(est.device)
+            images, labels = images.to(est.device), labels.to(est.device)
 
-            output = est.forward(data, opt.is_training)
+            logits = est.forward(images, opt.is_training)
 
-            loss = est.criterion(output, target)
+            loss = est.criterion(logits, labels)
 
             est.optimizer.zero_grad()
             loss.backward()
             est.optimizer.step()
 
-            metric = est.metric(output, target, opt.is_training)
+            metric = est.metric(logits, labels, opt.is_training)
 
             train_hooks.post_step(step=global_step(), epoch=epoch,
                                   index=index, size=size,
-                                  data=data, target=target,
-                                  output=output, loss=loss, metric=metric)
+                                  images=images, labels=labels,
+                                  logits=logits, loss=loss, metric=metric)
 
             global_step_inc()
 
@@ -186,25 +196,28 @@ def train(**kwargs):
                                   batch_size=est.data.valid.batch_size)
 
             with torch.no_grad():
-                for index, (data, target) in enumerate(valid_loader):
-                    size = len(data)
+                for index, (images, labels) in enumerate(valid_loader):
+                    size = len(images)
                     valid_hooks.pre_step(step=global_step(), epoch=epoch,
                                          index=index, size=size)
 
-                    data, target = data.to(est.device), target.to(est.device)
+                    images, labels = images.to(est.device), labels.to(est.device)
 
-                    output = est.forward(data, opt.is_training)
+                    logits = est.forward(images, opt.is_training)
 
-                    loss = est.criterion(output, target)
+                    loss = est.criterion(logits, labels)
 
-                    metric = est.metric(output, target, opt.is_training)
+                    metric = est.metric(logits, labels, opt.is_training)
 
                     valid_hooks.post_step(step=global_step(), epoch=epoch,
                                           index=index, size=size,
-                                          data=data, target=target,
-                                          output=output, loss=loss, metric=metric)
+                                          images=images, labels=labels,
+                                          logits=logits, loss=loss, metric=metric)
 
             valid_hooks.post_epoch(step=global_step(), epoch=epoch)
+
+        # End of epoch
+        opt.summary_writer.flush()
 
     train_end = time.time()
     train_hooks.end(train_end=train_end)
@@ -214,4 +227,6 @@ def train(**kwargs):
     # Save model
     #if (args.save_model):
     #    torch.save(est.model().state_dict(), "mnist_cnn.pt")
+
+    opt.summary_writer.close()
 

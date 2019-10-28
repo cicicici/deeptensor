@@ -54,6 +54,7 @@ class TrainProgressHook(TrainHook):
 
         self._tqdm = tqdm(total=self._epoch_size, initial=0, desc='train', ncols=80, unit='b', leave=False)
         self._epoch_start = time.time()
+        self._step_total = 0
         self._num_total = 0
 
         return None
@@ -63,6 +64,7 @@ class TrainProgressHook(TrainHook):
         loss = kwargs['loss']
         metric = kwargs['metric']
 
+        self._step_total += 1
         self._num_total += size
 
         # loss history update
@@ -92,6 +94,10 @@ class TrainProgressHook(TrainHook):
         self._tqdm = None
 
         self._ctx.stats.train_speed = self._num_total / elapsed_time
+
+        dt.vis.add_scalar('meter/img/sec', self._ctx.stats.train_speed)
+        dt.vis.add_scalar('meter/step/sec', self._step_total / elapsed_time)
+        dt.vis.add_scalar('meter/time/epoch', elapsed_time)
 
         return None
 
@@ -140,7 +146,16 @@ class ValidProgressHook(TrainHook):
         self._tqdm.close()
         self._tqdm = None
 
+        valid_loss = self._loss_total/self._num_total
         self._ctx.stats.valid_speed = self._num_total / (now_time - self._epoch_start)
+
+        dt.vis.add_scalar('valid/image/s', self._ctx.stats.valid_speed)
+        dt.vis.add_scalar('valid/avg_loss', self._ctx.stats.avg_loss)
+        dt.vis.add_scalar('valid/avg_{}'.format(self._ctx.stats.pri_metric_name), self._ctx.stats.pri_metric)
+        dt.vis.add_scalar('valid/loss', valid_loss)
+        for i, val in enumerate(self._metric_name):
+            if self._metric_name[i] is not None:
+                dt.vis.add_scalar('valid/{}'.format(self._metric_name[i]), self._metric_total[i]/self._num_total)
 
         if dt.train.is_chief():
             dt.info(dt.DC.TRAIN, '%s Epoch[%03d:lr=%.6f:gs=%06d] train (loss %s, %s %s), valid (loss %s, %s %s, %s %s), %.3f img/s' %
@@ -149,7 +164,7 @@ class ValidProgressHook(TrainHook):
                                      ('NA' if self._ctx.stats.avg_loss is None else '%8.6f' % self._ctx.stats.avg_loss),
                                      self._ctx.stats.pri_metric_name,
                                      ('NA' if self._ctx.stats.pri_metric is None else '%8.6f' % self._ctx.stats.pri_metric),
-                                     "{:.6f}".format(self._loss_total/self._num_total),
+                                     "{:.6f}".format(valid_loss),
                                      self._metric_name[0], "{:.6f}".format(self._metric_total[0]/self._num_total),
                                      self._metric_name[1], "{:.6f}".format(self._metric_total[1]/self._num_total),
                                      self._ctx.stats.train_speed))
@@ -203,7 +218,6 @@ class LearningRateHook(TrainHook):
                 self._epoch_window = self._lr_curve[0][2]
 
             self._epoch_cnt = 0
-
         return None
 
     def post_epoch(self, **kwargs):

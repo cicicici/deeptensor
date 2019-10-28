@@ -12,9 +12,9 @@ from .context import *
 
 import deeptensor.util
 import deeptensor.debug
+
 import deeptensor.config
 import deeptensor.tensor
-
 import deeptensor.data
 import deeptensor.initializer
 import deeptensor.metric
@@ -22,4 +22,5 @@ import deeptensor.optimize
 import deeptensor.train
 import deeptensor.estimator
 import deeptensor.model
+import deeptensor.vis
 

@@ -6,14 +6,14 @@ import deeptensor as dt
 import torch
 
 
-def accuracy(output, target, topk=(1,)):
+def accuracy(logits, labels, topk=(1,)):
     with torch.no_grad():
         maxk = max(topk)
-        batch_size = target.size(0)
+        batch_size = labels.size(0)
 
-        _, pred = output.topk(maxk, 1, True, True)
+        _, pred = logits.topk(maxk, 1, True, True)
         pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
+        correct = pred.eq(labels.view(1, -1).expand_as(pred))
 
         res = []
         for k in topk:

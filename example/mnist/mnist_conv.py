@@ -14,13 +14,14 @@ hvd.init()
 cfg = dt.config.Config(name="MNIST")
 ARGS = cfg.opt().args
 
-class Net(nn.Module):
+class MnistNet(nn.Module):
     def __init__(self):
-        super(Net, self).__init__()
+        super(MnistNet, self).__init__()
         self.conv1 = nn.Conv2d(1, 20, 5, 1)
         self.conv2 = nn.Conv2d(20, 50, 5, 1)
         self.fc1 = nn.Linear(4*4*50, 500)
         self.fc2 = nn.Linear(500, 10)
+        self.identity = nn.Identity()
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -30,6 +31,7 @@ class Net(nn.Module):
         x = x.view(-1, 4*4*50)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
+        x = self.identity(x)
         return x
 
 class MnistEstimator(dt.estimator.ClassEstimator):
@@ -51,7 +53,11 @@ class MnistEstimator(dt.estimator.ClassEstimator):
     def build_model(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build model".format(self.tag, type(self).__name__))
 
-        self._model = Net().to(self.device)
+        self._model = MnistNet().to(self.device)
+
+        #model = torchvision.models.resnet50(False)
+        # Have ResNet model take in grayscale rather than RGB
+        #model.conv1 = torch.nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
 
         return True
 
