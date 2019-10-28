@@ -79,9 +79,9 @@ class TrainProgressHook(TrainHook):
         if self._ctx.stats.pri_metric_name is None:
             self._ctx.stats.pri_metric_name = metric[0].name
         if self._ctx.stats.pri_metric is None:
-            self._ctx.stats.pri_metric = metric[0].value
+            self._ctx.stats.pri_metric = metric[0].tensor.item()
         else:
-            self._ctx.stats.pri_metric = self._ctx.stats.pri_metric * 0.9 + metric[0].value * 0.1
+            self._ctx.stats.pri_metric = self._ctx.stats.pri_metric * 0.9 + metric[0].tensor.item() * 0.1
 
         self._tqdm.update(1)
 
@@ -131,7 +131,7 @@ class ValidProgressHook(TrainHook):
         for i, val in enumerate(metric):
             if self._metric_name[i] is None:
                 self._metric_name[i] = metric[i].name
-            self._metric_total[i] += metric[i].value * size
+            self._metric_total[i] += metric[i].tensor.mul(size)
 
         self._tqdm.update(1)
 
@@ -155,7 +155,8 @@ class ValidProgressHook(TrainHook):
         dt.vis.add_scalar('valid/loss', valid_loss)
         for i, val in enumerate(self._metric_name):
             if self._metric_name[i] is not None:
-                dt.vis.add_scalar('valid/{}'.format(self._metric_name[i]), self._metric_total[i]/self._num_total)
+                self._metric_total[i].div_(self._num_total)
+                dt.vis.summary_tensor('metric/{}'.format(self._metric_name[i]), self._metric_total[i])
 
         if dt.train.is_chief():
             dt.info(dt.DC.TRAIN, '%s Epoch[%03d:lr=%.6f:gs=%06d] train (loss %s, %s %s), valid (loss %s, %s %s, %s %s), %.3f img/s' %
@@ -165,8 +166,8 @@ class ValidProgressHook(TrainHook):
                                      self._ctx.stats.pri_metric_name,
                                      ('NA' if self._ctx.stats.pri_metric is None else '%8.6f' % self._ctx.stats.pri_metric),
                                      "{:.6f}".format(valid_loss),
-                                     self._metric_name[0], "{:.6f}".format(self._metric_total[0]/self._num_total),
-                                     self._metric_name[1], "{:.6f}".format(self._metric_total[1]/self._num_total),
+                                     self._metric_name[0], "{:.6f}".format(self._metric_total[0].item()),
+                                     self._metric_name[1], "{:.6f}".format(self._metric_total[1].item()),
                                      self._ctx.stats.train_speed))
         return None
 

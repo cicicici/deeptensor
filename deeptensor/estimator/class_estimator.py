@@ -87,12 +87,12 @@ class ClassEstimator(estimator.BaseEstimator):
     def metric(self, logits, labels, is_training):
         if is_training:
             correct = self.correct(logits, labels, is_training)
-            acc = correct.sum().item() / len(labels)
-            return [dt.Opt(name='top1', value=acc)]
+            acc = correct.float().sum().div_(len(labels))
+            return [dt.Opt(name='top1', tensor=acc)]
         else:
             acc = dt.metric.accuracy(logits, labels, topk=(1, 5))
-            return [dt.Opt(name='top1', value=acc[0].item()),
-                    dt.Opt(name='top5', value=acc[1].item())]
+            return [dt.Opt(name='top1', tensor=acc[0]),
+                    dt.Opt(name='top5', tensor=acc[1])]
 
     def pre_train(self):
         dt.info(dt.DC.TRAIN, 'pre train [{}] device: {}'.format(self.tag, self._device))

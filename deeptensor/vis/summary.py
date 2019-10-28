@@ -96,3 +96,32 @@ def add_text(tag, text_string, global_step=None, writer=None):
 
     writer.add_text(tag, text_string, global_step=global_step)
 
+def summary_tensor(tag, tensor, global_step=None, writer=None):
+    if writer is None:
+        writer = get_default_writer()
+    if global_step is None:
+        global_step = dt.train.global_step()
+
+    writer.add_scalar(tag, torch.mean(tensor).item(), global_step=global_step)
+    writer.add_histogram(tag+'-h', tensor, global_step=global_step)
+
+def summary_tensor_abs(tag, tensor, global_step=None, writer=None):
+    if writer is None:
+        writer = get_default_writer()
+    if global_step is None:
+        global_step = dt.train.global_step()
+
+    tensor_abs = torch.abs(tensor)
+    writer.add_scalar(tag, torch.mean(tensor_abs).item(), global_step=global_step)
+    writer.add_histogram(tag+'-h', tensor_abs, global_step=global_step)
+
+def summary_tensor_clamp(tag, tensor, min_val, max_val, global_step=None, writer=None):
+    if writer is None:
+        writer = get_default_writer()
+    if global_step is None:
+        global_step = dt.train.global_step()
+
+    tensor_abs = torch.clamp(tensor, min_val, max_val)
+    writer.add_scalar(tag, torch.mean(tensor_abs).item(), global_step=global_step)
+    writer.add_histogram(tag+'-h', tensor_abs, global_step=global_step)
+

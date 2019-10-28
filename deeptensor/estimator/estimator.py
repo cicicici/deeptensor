@@ -108,6 +108,8 @@ class BaseEstimator(object):
 
     @abstractmethod
     def metric(self, logits, labels, is_training):
+        # Must return tensor in format of:
+        # return [dt.Opt(name='top1', tensor=acc[0]), dt.Opt(name='top5', tensor=acc[1])]
         return None
 
     @abstractmethod
