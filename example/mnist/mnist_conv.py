@@ -68,6 +68,6 @@ with dt.ctx(optim=ARGS.optim, lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_min
                    batch_size=ARGS.batch_size, valid_size=ARGS.valid_size, summary_freq=ARGS.summary_freq,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
-                   beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum,
+                   beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
                    random_seed=1 * (hvd.rank()+1), deferred=ARGS.deferred)
 

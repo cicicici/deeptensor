@@ -31,7 +31,7 @@ def add_image(tag, image, global_step=None, writer=None):
 
     writer.add_image(tag, image, global_step=global_step)
 
-def add_image_grid(tag, images, global_step=None, writer=None):
+def add_images_grid(tag, images, global_step=None, writer=None):
     if writer is None:
         writer = get_default_writer()
     if global_step is None:

@@ -107,11 +107,11 @@ class Config(object):
         section = 'args'
         self._default_config[section] = {}
         # common configurations
-        self._default_config[section]['name'] = "ImageNet ResNet-50"
+        self._default_config[section]['name'] = "Default"
         self._default_config[section]['tag'] = ""
         self._default_config[section]['host'] = "127.0.0.1"
         self._default_config[section]['port'] = 7001
-        self._default_config[section]['work_dir'] = "_train/imagenet"
+        self._default_config[section]['work_dir'] = "_train/default"
         self._default_config[section]['model_dir'] = ""
         self._default_config[section]['add'] = {}
         self._default_config[section]['m'] = ""
@@ -152,12 +152,12 @@ class Config(object):
 
             # no command line argument
             self._default_config[section]['save_interval'] = 600
-            self._default_config[section]['dataset'] = "imagenet"
+            self._default_config[section]['dataset'] = "default"
             self._default_config[section]['shuffle_size'] = 2048
             self._default_config[section]['summary_freq'] = 2
             self._default_config[section]['deferred'] = False
         elif self._app == 'scraper':
-            self._default_config[section]['data_dir'] = "_train/imagenet"
+            self._default_config[section]['data_dir'] = "_train/default"
             self._default_config[section]['data_filter'] = ".+"
 
         # debug configurations

@@ -61,7 +61,7 @@ class ClassEstimator(estimator.BaseEstimator):
         return True
 
     def build_optimizer(self):
-        self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(), momentum=self._ctx.momentum)
+        self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(), momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
         return True
 
     def build_hooks(self):

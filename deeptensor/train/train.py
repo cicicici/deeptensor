@@ -88,7 +88,7 @@ def train(**kwargs):
     opt += dt.Opt(lr_initial=0.001, lr_minimal=1e-6, lr_curve=[['*', 0.1, 10, 1]])
 
     # Default training options
-    opt += dt.Opt(optim='MaxProp', beta1=0.9, beta2=0.99, momentum=0.9, category='',
+    opt += dt.Opt(optim='SGD', beta1=0.9, beta2=0.99, momentum=0.9, weight_decay=5e-4, category='',
                   model_dir='asset/train', random_seed=12345, op_random_seed=12345,
                   max_ep=100000, summary_freq=16, summary_steps=100,
                   save_interval=600, max_keep=5, keep_interval=1000,
@@ -123,8 +123,8 @@ def train(**kwargs):
 
     # Save graph
     images, labels = next(iter(train_loader))
-    dt.vis.add_graph(est.model, images)
-    dt.vis.add_image_grid('model/inputs', images)
+    dt.vis.add_graph(est.model, images.to(est.device))
+    dt.vis.add_images_grid('model/inputs', images)
 
     # Hooks
     train_hooks = dt.train.TrainCallGroup(opt)

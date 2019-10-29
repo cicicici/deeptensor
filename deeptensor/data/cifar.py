@@ -8,29 +8,29 @@ from torchvision import datasets, transforms
 
 from deeptensor.data import data as data
 
-class Mnist(data.BaseData):
+class Cifar10(data.BaseData):
 
-    ORIG_IMAGE_SIZE = 28
+    ORIG_IMAGE_SIZE = 32
     ORIG_LABEL_SIZE = 1
 
-    NUM_CHANNELS = 1
-    IMAGE_HEIGHT = 28
-    IMAGE_WIDTH = 28
+    NUM_CHANNELS = 3
+    IMAGE_HEIGHT = 32
+    IMAGE_WIDTH = 32
     NUM_CLASSES = 10
 
-    TRAIN_NUM_PER_EPOCH = 60000
+    TRAIN_NUM_PER_EPOCH = 50000
     VALID_NUM_PER_EPOCH = 10000
     TEST_NUM_PER_EPOCH = 10000
 
     DATA_FORMAT = dt.dformat.NCHW
 
-    def __init__(self, data_dir = '_asset/data/mnist',
+    def __init__(self, data_dir = '_asset/data/cifar10',
                  batch_size=128, valid_size=128,
                  out_height=IMAGE_HEIGHT, out_width=IMAGE_WIDTH, distorted=False,
                  num_workers=1, pin_memory=True,
                  shuffle=True, shard=False, data_format=dt.dformat.DEFAULT):
-        super(Mnist, self).__init__()
-        self.tag = "DATA::MNIST"
+        super(Cifar10, self).__init__()
+        self.tag = "DATA::CIFAR10"
 
         self._data_dir = data_dir
 
@@ -58,39 +58,44 @@ class Mnist(data.BaseData):
         self.valid.batch_size = self._valid_size
         self.test.batch_size = self._test_size
 
-        self.train.num_total = Mnist.TRAIN_NUM_PER_EPOCH
-        self.valid.num_total = Mnist.VALID_NUM_PER_EPOCH
-        self.test.num_total = Mnist.TEST_NUM_PER_EPOCH
+        self.train.num_total = Cifar10.TRAIN_NUM_PER_EPOCH
+        self.valid.num_total = Cifar10.VALID_NUM_PER_EPOCH
+        self.test.num_total = Cifar10.TEST_NUM_PER_EPOCH
 
-        self.train.num_batch = int(math.ceil(Mnist.TRAIN_NUM_PER_EPOCH / self._batch_size))
-        self.valid.num_batch = int(math.ceil(Mnist.VALID_NUM_PER_EPOCH / self._valid_size))
-        self.test.num_batch = int(math.ceil(Mnist.TEST_NUM_PER_EPOCH / self._test_size))
+        self.train.num_batch = int(math.ceil(Cifar10.TRAIN_NUM_PER_EPOCH / self._batch_size))
+        self.valid.num_batch = int(math.ceil(Cifar10.VALID_NUM_PER_EPOCH / self._valid_size))
+        self.test.num_batch = int(math.ceil(Cifar10.TEST_NUM_PER_EPOCH / self._test_size))
+
+        self.classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
         return self
 
     def load_data(self):
         dt.trace(dt.DC.DATA, "[{}] load data".format(self.tag))
 
-        kwargs = {'num_workers': 1, 'pin_memory': True} if self._pin_memory else {}
-        self.train.dataset = datasets.MNIST(self._data_dir, train=True, download=True,
-                           transform=transforms.Compose([
-                               transforms.ToTensor(),
-                               transforms.Normalize((0.1307,), (0.3081,))
-                           ]))
+        transform_train = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+        kwargs = {'num_workers': self._num_workers, 'pin_memory': True} if self._pin_memory else {}
+        self.train.dataset = datasets.CIFAR10(self._data_dir, train=True, download=True,
+                           transform=transform_train)
         self.train.loader = torch.utils.data.DataLoader(self.train.dataset,
             batch_size=self._batch_size, shuffle=self._shuffle, **kwargs)
 
-        self.valid.dataset = datasets.MNIST(self._data_dir, train=False, transform=transforms.Compose([
-                               transforms.ToTensor(),
-                               transforms.Normalize((0.1307,), (0.3081,))
-                           ]))
+        self.valid.dataset = datasets.CIFAR10(self._data_dir, train=False, transform=transform_test)
         self.valid.loader = torch.utils.data.DataLoader(self.valid.dataset,
             batch_size=self._valid_size, shuffle=False, **kwargs)
 
-        self.test.dataset = datasets.MNIST(self._data_dir, train=False, transform=transforms.Compose([
-                               transforms.ToTensor(),
-                               transforms.Normalize((0.1307,), (0.3081,))
-                           ]))
+        self.test.dataset = datasets.CIFAR10(self._data_dir, train=False, transform=transform_test)
         self.test.loader = torch.utils.data.DataLoader(self.test.dataset,
             batch_size=self._test_size, shuffle=False, **kwargs)
 
