@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import horovod.torch as hvd
 
 # Init horovod
-hvd.init()
+dt.train.init_library()
 
 # Configuration
 cfg = dt.config.Config(name="MNIST")

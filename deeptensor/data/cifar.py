@@ -6,6 +6,8 @@ import deeptensor as dt
 import torch
 from torchvision import datasets, transforms
 
+import horovod.torch as hvd
+
 from deeptensor.data import data as data
 
 class Cifar10(data.BaseData):
@@ -61,9 +63,9 @@ class Cifar10(data.BaseData):
         self.valid.num_total = Cifar10.VALID_NUM_PER_EPOCH
         self.test.num_total = Cifar10.TEST_NUM_PER_EPOCH
 
-        self.train.num_batch = int(math.ceil(Cifar10.TRAIN_NUM_PER_EPOCH / self._batch_size))
-        self.valid.num_batch = int(math.ceil(Cifar10.VALID_NUM_PER_EPOCH / self._valid_size))
-        self.test.num_batch = int(math.ceil(Cifar10.TEST_NUM_PER_EPOCH / self._test_size))
+        self.train.num_batch = int(math.ceil(Cifar10.TRAIN_NUM_PER_EPOCH / self._batch_size / hvd.size()))
+        self.valid.num_batch = int(math.ceil(Cifar10.VALID_NUM_PER_EPOCH / self._valid_size / hvd.size()))
+        self.test.num_batch = int(math.ceil(Cifar10.TEST_NUM_PER_EPOCH / self._test_size / hvd.size()))
 
         self.classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
@@ -102,7 +104,7 @@ class Cifar10(data.BaseData):
             self.valid.sampler = torch.utils.data.distributed.DistributedSampler(
                 self.valid.dataset, num_replicas=hvd.size(), rank=hvd.rank(), shuffle=False)
             self.valid.loader = torch.utils.data.DataLoader(self.valid.dataset,
-                batch_size=self._batch_size, shuffle=False, sampler=self.valid.sampler, **kwargs)
+                batch_size=self._valid_size, shuffle=False, sampler=self.valid.sampler, **kwargs)
         else:
             self.valid.loader = torch.utils.data.DataLoader(self.valid.dataset,
                 batch_size=self._valid_size, shuffle=False, **kwargs)
@@ -113,7 +115,7 @@ class Cifar10(data.BaseData):
             self.test.sampler = torch.utils.data.distributed.DistributedSampler(
                 self.test.dataset, num_replicas=hvd.size(), rank=hvd.rank(), shuffle=False)
             self.test.loader = torch.utils.data.DataLoader(self.test.dataset,
-                batch_size=self._batch_size, shuffle=False, sampler=self.test.sampler, **kwargs)
+                batch_size=self._test_size, shuffle=False, sampler=self.test.sampler, **kwargs)
         else:
             self.test.loader = torch.utils.data.DataLoader(self.test.dataset,
                 batch_size=self._test_size, shuffle=False, **kwargs)

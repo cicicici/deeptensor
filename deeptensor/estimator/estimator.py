@@ -61,6 +61,10 @@ class BaseEstimator(object):
     def optimizer(self):
         return self._optimizer
 
+    @optimizer.setter
+    def optimizer(self, value):
+        self._optimizer = value
+
     @property
     def train_hooks(self):
         return self._train_hooks

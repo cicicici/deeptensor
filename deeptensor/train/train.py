@@ -23,6 +23,9 @@ _device_count = 0
 _global_step = None
 _learning_rate = None
 
+def init_library():
+    # Horovod: initialize library.
+    hvd.init()
 
 def init_device(opt):
     global _use_cuda
@@ -80,6 +83,11 @@ def get_lr_val():
     global _learning_rate
     return _learning_rate
 
+def mp_average(val, name):
+    tensor = torch.tensor(val)
+    avg_tensor = hvd.allreduce(tensor, name=name)
+    return avg_tensor.item()
+
 def init_learning_rate(opt):
     # Horovod: scale learning rate by the number of GPUs.
     set_lr_val(opt.lr_initial * hvd.size())
@@ -134,6 +142,9 @@ def train(**kwargs):
                   save_interval=600, max_keep=5, keep_interval=1000,
                   valid_metric=[], validate_ep=0, data_format=dt.dformat.DEFAULT)
 
+    # Default horovod options
+    opt += dt.Opt(fp16_allreduce=False)
+
     # Stats
     opt += dt.Opt(stats=dt.Opt(avg_loss=None, pri_metric_name=None, pri_metric=None, train_speed=None, valid_speed=None))
 
@@ -171,6 +182,18 @@ def train(**kwargs):
     if use_cuda():
         # Move model to GPU.
         est.model.cuda()
+
+    # Horovod: broadcast parameters & optimizer state.
+    hvd.broadcast_parameters(est.model.state_dict(), root_rank=chief_rank())
+    hvd.broadcast_optimizer_state(est.optimizer, root_rank=chief_rank())
+
+    # Horovod: (optional) compression algorithm.
+    compression = hvd.Compression.fp16 if opt.fp16_allreduce else hvd.Compression.none
+
+    # Horovod: wrap optimizer with DistributedOptimizer.
+    est.optimizer = hvd.DistributedOptimizer(est.optimizer,
+                                             named_parameters=est.model.named_parameters(),
+                                             compression=compression)
 
     # Local variables
     train_loader = est.data.train.loader
