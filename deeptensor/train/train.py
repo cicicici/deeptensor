@@ -16,8 +16,45 @@ import numpy as np
 import time
 
 
+_use_cuda = False
+_device = torch.device('cpu')
+_device_index = 0
+_device_count = 0
 _global_step = None
 _learning_rate = None
+
+
+def init_device(opt):
+    global _use_cuda
+    global _device
+    global _device_index
+    global _device_count
+    _use_cuda = not opt.no_cuda and torch.cuda.is_available()
+    _device = torch.device('cuda' if _use_cuda else 'cpu')
+    _device_index = hvd.local_rank() + opt.gpu0
+    _device_count = torch.cuda.device_count()
+
+def use_cuda():
+    global _use_cuda
+    return _use_cuda
+
+def device():
+    global _device
+    return _device
+
+def device_index():
+    global _device_index
+    return _device_index
+
+def device_count():
+    global _device_count
+    return _device_count
+
+def is_chief():
+    return hvd.rank() == 0
+
+def is_mp():
+    return hvd.size() > 1
 
 def global_step():
     global _global_step
@@ -46,9 +83,6 @@ def init_learning_rate(opt):
 
     dt.info(dt.DC.TRAIN, 'Initialize learning rate: initial {}, minimal {}, curve {}'
                              .format(opt.lr_initial, opt.lr_minimal, opt.lr_curve))
-
-def is_chief():
-    return hvd.rank() == 0
 
 def init_summary(opt):
     # summary writer
@@ -81,6 +115,9 @@ def train(**kwargs):
 
     opt = dt.Opt(kwargs) + dt.get_ctx()
 
+    # Set default device settings
+    opt += dt.Opt(gpu0=0)
+
     # Set default train mode
     opt += dt.Opt(is_training=True, is_eval=False, is_pred=False)
 
@@ -97,13 +134,18 @@ def train(**kwargs):
     # Stats
     opt += dt.Opt(stats=dt.Opt(avg_loss=None, pri_metric_name=None, pri_metric=None, train_speed=None, valid_speed=None))
 
-    dt.info(dt.DC.TRAIN, '[TRAIN] opt')
-    dt.print_pp(dt.opt_to_dict(opt))
+    if is_chief():
+        dt.info(dt.DC.TRAIN, '[TRAIN] opt')
+        dt.print_pp(dt.opt_to_dict(opt))
 
+    # Initialize device
+    init_device(opt)
     dt.info(dt.DC.TRAIN, '[HOROVOD] rank {}/{}, local {}'
                              .format(hvd.rank(), hvd.size(), hvd.local_rank()))
+    dt.info(dt.DC.TRAIN, '[DEVICE] use_cuda {}, device {}, gpu {}/{}'
+                             .format(use_cuda(), device(), device_index(), device_count()))
 
-    # Initialize
+    # Initialize training variables
     init_global_step(opt)
     init_learning_rate(opt)
     init_summary(opt)
@@ -112,6 +154,11 @@ def train(**kwargs):
     #    opt.summary_steps = opt.data.ep_size // opt.summary_freq
 
     torch.manual_seed(opt.random_seed)
+    if use_cuda():
+        torch.cuda.set_device(device_index())
+
+    # Horovod: limit # of CPU threads to be used per worker.
+    torch.set_num_threads(1)
 
     # Estimiator
     est = opt.est_class(opt, opt.est_cfg)

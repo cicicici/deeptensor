@@ -8,7 +8,7 @@ import torch
 class dformat(object):
     NHWC    = "NHWC"
     NCHW    = "NCHW"
-    DEFAULT = NHWC
+    DEFAULT = NCHW
 
 def dformat_to_tl(df):
     df_tl = None

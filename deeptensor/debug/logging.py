@@ -49,11 +49,17 @@ _logger = logging.getLogger('deeptensor')
 _logger.addHandler(logging.StreamHandler())
 _logger.setLevel(logging.DEBUG)
 
+_logger_tag = ''
+
 def set_verbosity(verbosity):
     _logger.setLevel(verbosity)
 
 def set_log_file(log_file):
     _logger.addHandler(logging.FileHandler(log_file))
+
+def set_log_tag(tag):
+    global _logger_tag
+    _logger_tag = tag
 
 def log(channel, level, msg, *args, **kwargs):
     if dt.DV(channel, level):
@@ -92,7 +98,8 @@ def _log_prefix(marker="D", frameskip=0):
     filename, line = _get_file_line(frameskip)
     basename = os.path.basename(filename)
 
-    s = '[%02d-%02d %02d:%02d:%02d.%06d %s/%s:%d] ' % (
+    s = '[%s%02d%02d_%02d:%02d:%02d.%06d %s/%s:%d] ' % (
+        _logger_tag,
         now_tuple[1],  # month
         now_tuple[2],  # day
         now_tuple[3],  # hour

@@ -82,7 +82,7 @@ with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
-                   random_seed=1 * (hvd.rank()+1), deferred=ARGS.deferred)
+                   random_seed=1 * (hvd.rank()+1), deferred=ARGS.deferred, gpu0=ARGS.gpu0)
 
 #dt.util.datalink_close()
 

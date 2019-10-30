@@ -125,7 +125,7 @@ class Config(object):
             self._default_config[section]['batch_size'] = 32
             self._default_config[section]['valid_size'] = 250
             self._default_config[section]['shard'] = True
-            self._default_config[section]['data_format'] = "NHWC"
+            self._default_config[section]['data_format'] = "NCHW"
             self._default_config[section]['model_name'] = "resnet"
             self._default_config[section]['model_type'] = "v2"
             self._default_config[section]['block_type'] = "bottleneck"
@@ -252,6 +252,7 @@ class Config(object):
             self._config.write(configfile)
         # log file
         dt.set_log_file('{}/log.txt'.format(inst_dir))
+        dt.set_log_tag("{} ".format(hvd.rank()))
 
         self._model_dir = model_dir
         self._inst_dir = inst_dir

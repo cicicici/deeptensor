@@ -26,8 +26,8 @@ class BaseEstimator(object):
         self._train_hooks = []
         self._valid_hooks = []
 
-        self._use_cuda = not cfg.no_cuda and torch.cuda.is_available()
-        self._device = torch.device("cuda" if self._use_cuda else "cpu")
+        self._use_cuda = dt.train.use_cuda()
+        self._device = dt.train.device()
 
     @property
     def tag(self):
