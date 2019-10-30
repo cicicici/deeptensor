@@ -158,6 +158,7 @@ class ValidProgressHook(TrainHook):
                 self._metric_total[i].div_(self._num_total)
                 dt.vis.summary_tensor('metric/{}'.format(self._metric_name[i]), self._metric_total[i])
 
+        # Horovod: print output only on first rank.
         if dt.train.is_chief():
             dt.info(dt.DC.TRAIN, '%s Epoch[%03d:lr=%.6f:gs=%06d] train (loss %s, %s %s), valid (loss %s, %s %s, %s %s), %.3f img/s' %
                                      (time.strftime("%H:%M:%S", time.gmtime(now_time - self._train_start)),

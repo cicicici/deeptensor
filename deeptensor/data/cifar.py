@@ -28,7 +28,7 @@ class Cifar10(data.BaseData):
                  batch_size=128, valid_size=128,
                  out_height=IMAGE_HEIGHT, out_width=IMAGE_WIDTH, distorted=False,
                  num_workers=1, pin_memory=True,
-                 shuffle=True, shard=False, data_format=dt.dformat.DEFAULT):
+                 shuffle=True, data_format=dt.dformat.DEFAULT):
         super(Cifar10, self).__init__()
         self.tag = "DATA::CIFAR10"
 
@@ -46,7 +46,6 @@ class Cifar10(data.BaseData):
         self._pin_memory = pin_memory
 
         self._shuffle = shuffle
-        self._shard = shard
         self._data_format = data_format
 
     def init_data(self):
@@ -86,18 +85,38 @@ class Cifar10(data.BaseData):
         ])
 
         kwargs = {'num_workers': self._num_workers, 'pin_memory': True} if self._pin_memory else {}
-        self.train.dataset = datasets.CIFAR10(self._data_dir, train=True, download=True,
-                           transform=transform_train)
-        self.train.loader = torch.utils.data.DataLoader(self.train.dataset,
-            batch_size=self._batch_size, shuffle=self._shuffle, **kwargs)
+        self.train.dataset = datasets.CIFAR10(self._data_dir, train=True, download=True, transform=transform_train)
+        if dt.train.is_mp():
+            # Horovod: use DistributedSampler to partition the training data.
+            self.train.sampler = torch.utils.data.distributed.DistributedSampler(
+                self.train.dataset, num_replicas=hvd.size(), rank=hvd.rank(), shuffle=self._shuffle)
+            self.train.loader = torch.utils.data.DataLoader(self.train.dataset,
+                batch_size=self._batch_size, shuffle=False, sampler=self.train.sampler, **kwargs)
+        else:
+            self.train.loader = torch.utils.data.DataLoader(self.train.dataset,
+                batch_size=self._batch_size, shuffle=self._shuffle, **kwargs)
 
         self.valid.dataset = datasets.CIFAR10(self._data_dir, train=False, transform=transform_test)
-        self.valid.loader = torch.utils.data.DataLoader(self.valid.dataset,
-            batch_size=self._valid_size, shuffle=False, **kwargs)
+        if dt.train.is_mp():
+            # Horovod: use DistributedSampler to partition the validation data.
+            self.valid.sampler = torch.utils.data.distributed.DistributedSampler(
+                self.valid.dataset, num_replicas=hvd.size(), rank=hvd.rank(), shuffle=False)
+            self.valid.loader = torch.utils.data.DataLoader(self.valid.dataset,
+                batch_size=self._batch_size, shuffle=False, sampler=self.valid.sampler, **kwargs)
+        else:
+            self.valid.loader = torch.utils.data.DataLoader(self.valid.dataset,
+                batch_size=self._valid_size, shuffle=False, **kwargs)
 
         self.test.dataset = datasets.CIFAR10(self._data_dir, train=False, transform=transform_test)
-        self.test.loader = torch.utils.data.DataLoader(self.test.dataset,
-            batch_size=self._test_size, shuffle=False, **kwargs)
+        if dt.train.is_mp():
+            # Horovod: use DistributedSampler to partition the test data.
+            self.test.sampler = torch.utils.data.distributed.DistributedSampler(
+                self.test.dataset, num_replicas=hvd.size(), rank=hvd.rank(), shuffle=False)
+            self.test.loader = torch.utils.data.DataLoader(self.test.dataset,
+                batch_size=self._batch_size, shuffle=False, sampler=self.test.sampler, **kwargs)
+        else:
+            self.test.loader = torch.utils.data.DataLoader(self.test.dataset,
+                batch_size=self._test_size, shuffle=False, **kwargs)
 
         return self
 

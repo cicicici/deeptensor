@@ -50,6 +50,9 @@ def device_count():
     global _device_count
     return _device_count
 
+def chief_rank():
+    return 0
+
 def is_chief():
     return hvd.rank() == 0
 
@@ -78,11 +81,11 @@ def get_lr_val():
     return _learning_rate
 
 def init_learning_rate(opt):
+    # Horovod: scale learning rate by the number of GPUs.
+    set_lr_val(opt.lr_initial * hvd.size())
 
-    set_lr_val(opt.lr_initial)
-
-    dt.info(dt.DC.TRAIN, 'Initialize learning rate: initial {}, minimal {}, curve {}'
-                             .format(opt.lr_initial, opt.lr_minimal, opt.lr_curve))
+    dt.info(dt.DC.TRAIN, 'Initialize learning rate: initial {} * {}, minimal {}, curve {}'
+                             .format(opt.lr_initial, hvd.size(), opt.lr_minimal, opt.lr_curve))
 
 def init_summary(opt):
     # summary writer
@@ -155,6 +158,7 @@ def train(**kwargs):
 
     torch.manual_seed(opt.random_seed)
     if use_cuda():
+        # Horovod: pin GPU to local rank.
         torch.cuda.set_device(device_index())
 
     # Horovod: limit # of CPU threads to be used per worker.
@@ -164,14 +168,18 @@ def train(**kwargs):
     est = opt.est_class(opt, opt.est_cfg)
     est.build_estimator()
 
+    if use_cuda():
+        # Move model to GPU.
+        est.model.cuda()
+
     # Local variables
     train_loader = est.data.train.loader
     valid_loader = est.data.valid.loader
 
     # Save graph
-    images, labels = next(iter(train_loader))
-    dt.vis.add_graph(est.model, images.to(est.device))
-    dt.vis.add_images_grid('model/inputs', images)
+    #images, labels = next(iter(train_loader))
+    #dt.vis.add_graph(est.model, images.to(est.device))
+    #dt.vis.add_images_grid('model/inputs', images)
 
     # Hooks
     train_hooks = dt.train.TrainCallGroup(opt)
@@ -198,6 +206,9 @@ def train(**kwargs):
         est.model.train()
         opt.is_training = True
         opt.is_eval = False
+        if est.data.train.sampler is not None:
+            # Horovod: set epoch to sampler for shuffling.
+            est.data.train.sampler.set_epoch(epoch)
 
         train_hooks.pre_epoch(step=global_step(), epoch=epoch,
                               epoch_size=est.data.train.num_batch,
@@ -210,7 +221,8 @@ def train(**kwargs):
             train_hooks.pre_step(step=global_step(), epoch=epoch,
                                  index=index, size=size)
 
-            images, labels = images.to(est.device), labels.to(est.device)
+            if use_cuda():
+                images, labels = images.cuda(), labels.cuda()
 
             logits = est.forward(images, opt.is_training)
 
@@ -248,7 +260,8 @@ def train(**kwargs):
                     valid_hooks.pre_step(step=global_step(), epoch=epoch,
                                          index=index, size=size)
 
-                    images, labels = images.to(est.device), labels.to(est.device)
+                    if use_cuda():
+                        images, labels = images.cuda(), labels.cuda()
 
                     logits = est.forward(images, opt.is_training)
 

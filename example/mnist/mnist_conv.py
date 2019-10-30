@@ -53,7 +53,7 @@ class MnistEstimator(dt.estimator.ClassEstimator):
     def build_model(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build model".format(self.tag, type(self).__name__))
 
-        self._model = MnistNet().to(self.device)
+        self._model = MnistNet()
 
         #model = torchvision.models.resnet50(False)
         # Have ResNet model take in grayscale rather than RGB
