@@ -69,7 +69,8 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
     def build_model(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build model".format(self.tag, type(self).__name__))
 
-        self._model = dt.model.ResNet18()
+        #self._model = dt.model.ResNet18()
+        self._model = dt.model.ResNet152()
         #self._model = MnistNet()
 
         return True

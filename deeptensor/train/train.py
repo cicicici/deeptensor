@@ -199,11 +199,6 @@ def train(**kwargs):
     train_loader = est.data.train.loader
     valid_loader = est.data.valid.loader
 
-    # Save graph
-    #images, labels = next(iter(train_loader))
-    #dt.vis.add_graph(est.model, images.to(est.device))
-    #dt.vis.add_images_grid('model/inputs', images)
-
     # Hooks
     train_hooks = dt.train.TrainCallGroup(opt)
     train_hooks.add(dt.train.LearningRateHook(opt, lr_val=get_lr_val(), lr_minimal=opt.lr_minimal, lr_curve=opt.lr_curve, optimizer=est.optimizer))
@@ -246,6 +241,12 @@ def train(**kwargs):
 
             if use_cuda():
                 images, labels = images.cuda(), labels.cuda()
+
+            # Save graph
+            if global_step() == 0:
+                #images, labels = next(iter(train_loader))
+                dt.vis.add_graph(est.model, images.to(est.device))
+                dt.vis.add_images_grid('model/inputs', images)
 
             logits = est.forward(images, opt.is_training)
 
