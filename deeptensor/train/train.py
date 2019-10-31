@@ -75,6 +75,10 @@ def init_global_step(opt):
     global _global_step
     _global_step = 0
 
+def set_global_step(step):
+    global _global_step
+    _global_step = step
+
 def set_lr_val(lr):
     global _learning_rate
     _learning_rate = lr
@@ -83,14 +87,35 @@ def get_lr_val():
     global _learning_rate
     return _learning_rate
 
+def set_lr_val_mp(lr):
+    global _learning_rate
+    _learning_rate = lr * hvd.size()
+
+def get_lr_val_base():
+    global _learning_rate
+    return _learning_rate / hvd.size()
+
 def mp_average(val, name):
     tensor = torch.tensor(val)
     avg_tensor = hvd.allreduce(tensor, name=name)
     return avg_tensor.item()
 
+def mp_broadcast(params):
+    tensor_params = {}
+    for key, value in params.items():
+        tensor_params[key] = torch.tensor(value)
+
+    hvd.broadcast_parameters(tensor_params, root_rank=chief_rank())
+
+    sync_params = {}
+    for key, tensor in tensor_params.items():
+        sync_params[key] = tensor.item()
+
+    return sync_params
+
 def init_learning_rate(opt):
     # Horovod: scale learning rate by the number of GPUs.
-    set_lr_val(opt.lr_initial * hvd.size())
+    set_lr_val_mp(opt.lr_initial)
 
     dt.info(dt.DC.TRAIN, 'Initialize learning rate: initial {} * {}, minimal {}, curve {}'
                              .format(opt.lr_initial, hvd.size(), opt.lr_minimal, opt.lr_curve))
@@ -101,14 +126,11 @@ def init_summary(opt):
     opt.summary_writer = SummaryWriter(opt.log_dir)
     dt.vis.set_default_writer(opt.summary_writer)
 
-def optim_func(loss, **kwargs):
-    opt = dt.Opt(kwargs)
-
-    # default training options
-    opt += dt.Opt(optim='MaxProp', lr=0.001, beta1=0.9, beta2=0.99, momentum=0.9, category='')
-
-    dt.debug(dt.DC.TRAIN, "[OPTIM] {}, lr {}, beta1 {}, beta2 {}, momentum {}, category {}, deferred {}"
-                                 .format(opt.optim, opt.lr, opt.beta1, opt.beta2, opt.momentum, opt.catetory, opt.deferred))
+def init_saver(opt):
+    # checkpoint
+    opt.saver = dt.Opt(model_latest = opt.args.inst_dir + '/model_latest.pt',
+                       optimizer_latest = opt.args.inst_dir + '/optimizer_latest.pt',
+                       model_final = opt.args.inst_dir + '/model_final.pt')
 
 def adjust_learning_rate(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -137,20 +159,19 @@ def train(**kwargs):
 
     # Default training options
     opt += dt.Opt(optim='SGD', beta1=0.9, beta2=0.99, momentum=0.9, weight_decay=5e-4, category='',
-                  model_dir='asset/train', random_seed=12345, op_random_seed=12345,
-                  max_ep=100000, summary_freq=16, summary_steps=100,
-                  save_interval=600, max_keep=5, keep_interval=1000,
-                  valid_metric=[], validate_ep=0, data_format=dt.dformat.DEFAULT)
+                  model_dir='asset/train', random_seed=12345, max_ep=100000,
+                  save_interval=1, max_keep=5, validate_ep=0, data_format=dt.dformat.DEFAULT)
 
     # Default horovod options
     opt += dt.Opt(fp16_allreduce=False)
 
     # Stats
-    opt += dt.Opt(stats=dt.Opt(avg_loss=None, pri_metric_name=None, pri_metric=None, train_speed=None, valid_speed=None))
+    opt += dt.Opt(stats=dt.Opt(avg_loss=None, train_metric_name=None, train_metric=None,
+                               valid_loss=None, valid_metric_name=None, valid_metric=None,
+                               train_speed=None, valid_speed=None))
 
-    if is_chief():
-        dt.info(dt.DC.TRAIN, '[TRAIN] opt')
-        dt.print_pp(dt.opt_to_dict(opt))
+    # Saver
+    opt += dt.Opt(epoch_done=-1)
 
     # Initialize device
     init_device(opt)
@@ -163,9 +184,11 @@ def train(**kwargs):
     init_global_step(opt)
     init_learning_rate(opt)
     init_summary(opt)
+    init_saver(opt)
 
-    #if opt.summary_freq > 0:
-    #    opt.summary_steps = opt.data.ep_size // opt.summary_freq
+    if is_chief():
+        dt.info(dt.DC.TRAIN, '[TRAIN] opt')
+        dt.print_pp(dt.opt_to_dict(opt))
 
     torch.manual_seed(opt.random_seed)
     if use_cuda():
@@ -179,9 +202,27 @@ def train(**kwargs):
     est = opt.est_class(opt, opt.est_cfg)
     est.build_estimator()
 
+    # Load checkpoint
+    sync_params = {'epoch_done': opt.epoch_done, 'global_step': global_step()}
+    if is_chief():
+        model_params = dt.model.load(est.model, opt.saver.model_latest)
+        optimizer_params = dt.optimizer.load(est.optimizer, opt.saver.optimizer_latest)
+        if optimizer_params:
+            sync_params['epoch_done'] = optimizer_params.epoch
+            sync_params['global_step'] = optimizer_params.step
+            #opt.stats = optimizer_params.stats
+
+    sync_params = mp_broadcast(sync_params)
+    opt.epoch_done = int(sync_params['epoch_done'])
+    set_global_step(int(sync_params['global_step']))
+    dt.trace(dt.DC.TRAIN, '[CHECKPOINT] epoch_done {}, global_step {}'.format(opt.epoch_done, global_step()))
+
     if use_cuda():
         # Move model to GPU.
         est.model.cuda()
+
+    # Make sure learning rate is up to date
+    update_learning_rate(est.optimizer)
 
     # Horovod: broadcast parameters & optimizer state.
     hvd.broadcast_parameters(est.model.state_dict(), root_rank=chief_rank())
@@ -231,6 +272,12 @@ def train(**kwargs):
         train_hooks.pre_epoch(step=global_step(), epoch=epoch,
                               epoch_size=est.data.train.num_batch,
                               batch_size=est.data.train.batch_size)
+
+        # Skip previous done epochs
+        if epoch <= opt.epoch_done:
+            train_hooks.post_epoch(step=global_step(), epoch=epoch)
+            continue
+
         dt.vis.add_scalar('train/epoch', epoch+1)
         dt.vis.add_scalar('train/lr', get_lr_val())
 
@@ -300,9 +347,24 @@ def train(**kwargs):
 
             valid_hooks.post_epoch(step=global_step(), epoch=epoch)
 
+        if is_chief():
+            if opt.save_interval > 0 and (epoch+1) % opt.save_interval == 0:
+                dt.model.save(est.model, opt.saver.model_latest,
+                              valid_loss=opt.stats.valid_loss,
+                              valid_metric_name=opt.stats.valid_metric_name,
+                              valid_metric=opt.stats.valid_metric)
+                dt.optimizer.save(est.optimizer, opt.saver.optimizer_latest,
+                                  step=global_step(), epoch=epoch,
+                                  lr_val_base=get_lr_val_base(), stats=opt.stats)
+
         # End of epoch
         opt.summary_writer.flush()
 
+    if is_chief():
+        dt.model.save(est.model, opt.saver.model_final,
+                      valid_loss=opt.stats.valid_loss,
+                      valid_metric_name=opt.stats.valid_metric_name,
+                      valid_metric=opt.stats.valid_metric)
     train_end = time.time()
     train_hooks.end(train_end=train_end)
     valid_hooks.end(train_end=train_end)

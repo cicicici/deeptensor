@@ -18,7 +18,7 @@ import deeptensor.tensor
 import deeptensor.data
 import deeptensor.initializer
 import deeptensor.metric
-import deeptensor.optimize
+import deeptensor.optimizer
 import deeptensor.train
 import deeptensor.estimator
 import deeptensor.model

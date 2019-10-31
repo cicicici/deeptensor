@@ -27,6 +27,14 @@ def dict_to_opt(d):
             opt[k] = v
     return opt
 
+def opt_to_file(opt, fname):
+    with open(fname, 'w') as f:
+        json.dump(opt_to_dict(opt), f, indent=2)
+
+def opt_from_file(fname):
+    with open(fname, 'r') as f:
+        return dict_to_opt(json.load(f))
+
 class Opt(collections.MutableMapping):
 
     def __init__(self, *args, **kwargs):
@@ -73,6 +81,13 @@ class Opt(collections.MutableMapping):
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
+    def to_dict(self):
+        return opt_to_dict(self)
+
+    @staticmethod
+    def from_dict(d):
+        return dict_to_opt(d)
+
     def dumps(self):
         return json.dumps(opt_to_dict(self))
 
@@ -80,4 +95,11 @@ class Opt(collections.MutableMapping):
         res = Opt(self.__dict__)
         res *= dict_to_opt(json.loads(s))
         return res
+
+    def to_file(self, fname):
+        opt_to_file(self, fname)
+
+    @staticmethod
+    def from_file(fname):
+        return opt_from_file(fname)
 

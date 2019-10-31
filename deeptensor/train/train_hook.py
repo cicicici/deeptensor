@@ -79,12 +79,12 @@ class TrainProgressHook(TrainHook):
                 self._ctx.stats.avg_loss = self._ctx.stats.avg_loss * 0.9 + loss_val * 0.1
 
         # primary metric history update
-        if self._ctx.stats.pri_metric_name is None:
-            self._ctx.stats.pri_metric_name = metric[0].name
-        if self._ctx.stats.pri_metric is None:
-            self._ctx.stats.pri_metric = metric[0].tensor.item()
+        if self._ctx.stats.train_metric_name is None:
+            self._ctx.stats.train_metric_name = metric[0].name
+        if self._ctx.stats.train_metric is None:
+            self._ctx.stats.train_metric = metric[0].tensor.item()
         else:
-            self._ctx.stats.pri_metric = self._ctx.stats.pri_metric * 0.9 + metric[0].tensor.item() * 0.1
+            self._ctx.stats.train_metric = self._ctx.stats.train_metric * 0.9 + metric[0].tensor.item() * 0.1
 
         if dt.train.is_chief():
             self._tqdm.update(1)
@@ -158,28 +158,30 @@ class ValidProgressHook(TrainHook):
         else:
             self._ctx.stats.valid_speed = self._num_total / (now_time - self._epoch_start)
 
-        valid_loss = dt.train.mp_average(self._loss_total/self._num_total, 'epoch_valid_loss')
-        #dt.trace(dt.DC.TRAIN, '[EPOCH {}] local {}, avg {}'.format(epoch, self._loss_total/self._num_total, valid_loss))
+        self._ctx.stats.valid_loss = dt.train.mp_average(self._loss_total/self._num_total, 'epoch_valid_loss')
+        #dt.trace(dt.DC.TRAIN, '[EPOCH {}] local {}, avg {}'.format(epoch, self._loss_total/self._num_total, self._ctx.stats.valid_loss))
         train_avg_loss = dt.train.mp_average(self._ctx.stats.avg_loss, 'epoch_avg_loss')
-        train_pri_metric = dt.train.mp_average(self._ctx.stats.pri_metric, 'epoch_pri_metric')
+        train_metric = dt.train.mp_average(self._ctx.stats.train_metric, 'epoch_train_metric')
 
         dt.vis.add_scalar('valid/image/s', self._ctx.stats.valid_speed)
         dt.vis.add_scalar('valid/avg_loss', train_avg_loss)
-        dt.vis.add_scalar('valid/avg_{}'.format(self._ctx.stats.pri_metric_name), train_pri_metric)
-        dt.vis.add_scalar('valid/loss', valid_loss)
+        dt.vis.add_scalar('valid/avg_{}'.format(self._ctx.stats.train_metric_name), train_metric)
+        dt.vis.add_scalar('valid/loss', self._ctx.stats.valid_loss)
         for i, val in enumerate(self._metric_name):
             if self._metric_name[i] is not None:
                 self._metric_total[i].div_(self._num_total)
                 self._metric_total[i] = hvd.allreduce(self._metric_total[i], name='epoch_metric_total_%d' % i)
                 dt.vis.summary_tensor('metric/{}'.format(self._metric_name[i]), self._metric_total[i])
+        self._ctx.stats.valid_metric_name = self._metric_name[0]
+        self._ctx.stats.valid_metric = self._metric_total[0].item()
 
         # Horovod: print output only on first rank.
         if dt.train.is_chief():
             dt.info(dt.DC.TRAIN, '%s Epoch[%03d:lr=%.6f:gs=%06d] train (loss %s, %s %s), valid (loss %s, %s %s, %s %s), %.3f img/s' %
                                      (time.strftime("%H:%M:%S", time.gmtime(now_time - self._train_start)),
                                      (epoch+1), dt.train.get_lr_val(), step,
-                                     "{:.6f}".format(train_avg_loss), self._ctx.stats.pri_metric_name, "{:.6f}".format(train_pri_metric),
-                                     "{:.6f}".format(valid_loss),
+                                     "{:.6f}".format(train_avg_loss), self._ctx.stats.train_metric_name, "{:.6f}".format(train_metric),
+                                     "{:.6f}".format(self._ctx.stats.valid_loss),
                                      self._metric_name[0], "{:.6f}".format(self._metric_total[0].item()),
                                      self._metric_name[1], "{:.6f}".format(self._metric_total[1].item()),
                                      self._ctx.stats.train_speed))

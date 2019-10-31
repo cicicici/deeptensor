@@ -79,11 +79,11 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
 with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
             lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve):
     dt.train.train(args=ARGS, est_class = Cifar10Estimator, est_cfg=dt.Opt(),
-                   batch_size=ARGS.batch_size, valid_size=ARGS.valid_size, summary_freq=ARGS.summary_freq,
+                   batch_size=ARGS.batch_size, valid_size=ARGS.valid_size,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
-                   random_seed=1 * (hvd.rank()+1), deferred=ARGS.deferred, gpu0=ARGS.gpu0)
+                   random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0)
 
 #dt.util.datalink_close()
 
