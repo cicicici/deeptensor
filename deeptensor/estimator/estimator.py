@@ -126,10 +126,14 @@ class BaseEstimator(object):
     def post_train(self):
         return False
 
+    def post_model(self):
+        pass
+
     # Core
     def build_estimator(self):
         self.build_data()
         self.build_model()
+        self.post_model()
         self.build_criterion()
         self.build_optimizer()
         self.build_hooks()

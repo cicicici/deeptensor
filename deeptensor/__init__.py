@@ -23,4 +23,5 @@ import deeptensor.train
 import deeptensor.estimator
 import deeptensor.model
 import deeptensor.vis
+import deeptensor.summary
 

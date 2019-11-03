@@ -101,3 +101,8 @@ class ClassEstimator(estimator.BaseEstimator):
     def post_train(self):
         return None
 
+    def post_model(self):
+        if dt.train.is_chief():
+            dt.info(dt.DC.TRAIN, "\n{}".format(self._model))
+            dt.info(dt.DC.TRAIN, "\n{}".format(dt.summary.summary_model_keras(self._model, (3, 32, 32), device='cpu')))
+
