@@ -18,7 +18,7 @@ def gpus():
 __global_ctx_list = []
 
 @contextmanager
-def ctx(ctx_list, opt, **kwargs):
+def ctx_cl(ctx_list, opt, **kwargs):
     global __global_ctx_list
 
     # append current context when enter
@@ -53,11 +53,11 @@ def ctx(**kwargs):
     # clear current context when exit
     del __global_ctx_list[-1]
 
-def get_ctx_list(**kwargs):
+def create_ctx_list(**kwargs):
     _cur_ctx = dt.Opt(kwargs)
     return [_cur_ctx]
 
-def get_ctx(ctx_list):
+def get_ctx_cl(ctx_list):
     global __global_ctx_list
 
     # merge current context
@@ -81,14 +81,27 @@ def get_ctx():
 
     return res
 
-def dec_ctx_func(func):
+def dec_ctx_func_cl(func):
 
     @wraps(func)
     def wrapper(ctx_list, **kwargs):
         # kwargs parsing
-        _opt = dt.Opt(kwargs) + get_ctx(ctx_list)
+        _opt = dt.Opt(kwargs) + get_ctx_cl(ctx_list)
 
         _out = func(ctx_list, _opt)
+
+        return _out
+
+    return wrapper
+
+def dec_ctx_func(func):
+
+    @wraps(func)
+    def wrapper(**kwargs):
+        # kwargs parsing
+        _opt = dt.Opt(kwargs) + get_ctx()
+
+        _out = func(_opt)
 
         return _out
 
