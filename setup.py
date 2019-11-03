@@ -8,11 +8,11 @@ from setuptools import setup
 from setuptools import find_packages
 
 requirements = [
-    'numpy',
-    'six',
-    'torch',
-    'torchvision',
-    'horovod',
+    #'numpy',
+    #'six',
+    #'torch',
+    #'torchvision',
+    #'horovod',
 ]
 
 exec(open('deeptensor/_version_.py').read())
@@ -32,5 +32,6 @@ setup(
 
     zip_safe=True,
     install_requires=requirements,
+    python_requires='>=3.6',
 )
 
