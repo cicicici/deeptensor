@@ -30,26 +30,6 @@ ARGS = cfg.opt().args
 #    dt.util.datalink_start(port=ARGS.port)
 #    dt.util.datalink_register_recv(datalink_recv)
 
-class MnistNet(nn.Module):
-    def __init__(self):
-        super(MnistNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 20, 5, 1)
-        self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(5*5*50, 500)
-        self.fc2 = nn.Linear(500, 10)
-        self.identity = nn.Identity()
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 5*5*50)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        x = self.identity(x)
-        return x
-
 class Cifar10Estimator(dt.estimator.ClassEstimator):
     def __init__(self, opt, cfg):
         super(Cifar10Estimator, self).__init__(opt, cfg)
@@ -69,9 +49,20 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
     def build_model(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build model".format(self.tag, type(self).__name__))
 
+        #self._model = dt.model.VGG('VGG19')
         #self._model = dt.model.ResNet18()
-        self._model = dt.model.ResNet152()
-        #self._model = MnistNet()
+        #self._model = dt.model.ResNet152()
+        #self._model = dt.model.PreActResNet18()
+        #self._model = dt.model.GoogLeNet()
+        #self._model = dt.model.DenseNet121()
+        #self._model = dt.model.ResNeXt29_2x64d()
+        #self._model = dt.model.MobileNet()
+        #self._model = dt.model.MobileNetV2()
+        #self._model = dt.model.DPN92()
+        #self._model = dt.model.ShuffleNetG2()
+        #self._model = dt.model.SENet18()
+        #self._model = dt.model.ShuffleNetV2(1)
+        self._model = dt.model.EfficientNetB0()
 
         return True
 
