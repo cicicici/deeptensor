@@ -139,4 +139,3 @@ def error(chn, msg, *args, frameskip=0, **kwargs):
 def critical(chn, msg, *args, frameskip=0, **kwargs):
     if dt.DV(chn, dt.DL.CRITICAL):
         _logger.critical(_log_prefix(marker="C", frameskip=frameskip) + msg, *args, **kwargs)
-

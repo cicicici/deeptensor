@@ -39,7 +39,8 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
     def build_data(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build data".format(self.tag, type(self).__name__))
         args = self._ctx.args
-        data = dt.data.Cifar10(batch_size=args.batch_size, valid_size=args.valid_size,
+        data = dt.data.Cifar10(data_dir='/data/cifar10',
+                               batch_size=args.batch_size, valid_size=args.valid_size,
                                num_workers=1, pin_memory=self.use_cuda)
         data.init_data()
         data.load_data()
@@ -49,20 +50,23 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
     def build_model(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build model".format(self.tag, type(self).__name__))
 
-        #self._model = dt.model.VGG('VGG19')
-        #self._model = dt.model.ResNet18()
-        #self._model = dt.model.ResNet152()
-        #self._model = dt.model.PreActResNet18()
-        #self._model = dt.model.GoogLeNet()
-        #self._model = dt.model.DenseNet121()
-        #self._model = dt.model.ResNeXt29_2x64d()
-        #self._model = dt.model.MobileNet()
-        #self._model = dt.model.MobileNetV2()
-        #self._model = dt.model.DPN92()
-        #self._model = dt.model.ShuffleNetG2()
-        #self._model = dt.model.SENet18()
-        #self._model = dt.model.ShuffleNetV2(1)
-        self._model = dt.model.EfficientNetB0()
+        #self._model = dt.model.cifar.VGG('VGG19')        # target 92.64%
+        #self._model = dt.model.cifar.ResNet18()          # target 93.02%
+        #self._model = dt.model.cifar.ResNet50()          # target 93.62%
+        #self._model = dt.model.cifar.ResNet101()         # target 93.75%
+        self._model = dt.model.cifar.ResNet152()         # 8-gpu  94.2+%
+        #self._model = dt.model.cifar.PreActResNet18()    # target 95.11%, NAN
+        #self._model = dt.model.cifar.GoogLeNet()
+        #self._model = dt.model.cifar.DenseNet121()       # target 95.04%
+        #self._model = dt.model.cifar.ResNeXt29_32x4d()   # target 94.73%
+        #self._model = dt.model.cifar.ResNeXt29_2x64d()   # target 94.82%
+        #self._model = dt.model.cifar.MobileNet()
+        #self._model = dt.model.cifar.MobileNetV2()       # target 94.43%
+        #self._model = dt.model.cifar.DPN92()             # target 95.16%
+        #self._model = dt.model.cifar.ShuffleNetG2()
+        #self._model = dt.model.cifar.SENet18()
+        #self._model = dt.model.cifar.ShuffleNetV2(1)
+        #self._model = dt.model.cifar.EfficientNetB0()
 
         return True
 
@@ -77,4 +81,3 @@ with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
                    random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0)
 
 #dt.util.datalink_close()
-

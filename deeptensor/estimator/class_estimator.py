@@ -8,10 +8,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from deeptensor.estimator import estimator as estimator
+from deeptensor.estimator import BaseEstimator
 
 
-class ClassEstimator(estimator.BaseEstimator):
+class ClassEstimator(BaseEstimator):
 
     def __init__(self, opt, cfg):
         super(ClassEstimator, self).__init__(opt, cfg)
@@ -107,4 +107,3 @@ class ClassEstimator(estimator.BaseEstimator):
             dt.summary.summary_model_patch(self._model)
             dt.info(dt.DC.TRAIN, "\n{}".format(dt.summary.summary_model_fwd(self._model, (3, 32, 32), device='cpu')))
             dt.summary.summary_model_patch(self._model, patch_fn=dt.summary.patch_clear_dt)
-

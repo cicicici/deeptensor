@@ -1,2 +1,1 @@
-from .metric import *
-
+from .metric import accuracy

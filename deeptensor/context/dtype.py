@@ -9,4 +9,3 @@ floatx = torch.float32
 intx = torch.int32
 eps = 1e-5
 precision = 8
-

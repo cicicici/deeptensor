@@ -6,9 +6,9 @@ import deeptensor as dt
 import torch
 from torchvision import datasets, transforms
 
-from deeptensor.data import data as data
+from deeptensor.data import BaseData
 
-class Mnist(data.BaseData):
+class Mnist(BaseData):
 
     ORIG_IMAGE_SIZE = 28
     ORIG_LABEL_SIZE = 1
@@ -95,4 +95,3 @@ class Mnist(data.BaseData):
             batch_size=self._test_size, shuffle=False, **kwargs)
 
         return self
-

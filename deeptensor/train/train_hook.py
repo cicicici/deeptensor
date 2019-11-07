@@ -255,4 +255,3 @@ class TrainCallGroup(dt.util.CallGroup):
         for cb in self._callbacks:
             ret.append(cb.post_epoch(**kwargs))
         return ret
-

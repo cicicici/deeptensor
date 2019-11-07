@@ -4,35 +4,44 @@ import math
 
 import deeptensor as dt
 import torch
+from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 import horovod.torch as hvd
 
 from deeptensor.data import BaseData
 
-class Cifar10(BaseData):
 
-    ORIG_IMAGE_SIZE = 32
+class ImageNet(BaseData):
+
+    ORIG_IMAGE_SIZE = 224
     ORIG_LABEL_SIZE = 1
 
     NUM_CHANNELS = 3
-    IMAGE_HEIGHT = 32
-    IMAGE_WIDTH = 32
-    NUM_CLASSES = 10
+    IMAGE_HEIGHT = 224
+    IMAGE_WIDTH = 224
+    NUM_CLASSES = 1000
 
-    TRAIN_NUM_PER_EPOCH = 50000
-    VALID_NUM_PER_EPOCH = 10000
-    TEST_NUM_PER_EPOCH = 10000
+    TRAIN_NUM_PER_EPOCH = 1281167
+    VALID_NUM_PER_EPOCH = 50000
+    TEST_NUM_PER_EPOCH = 50000
 
     DATA_FORMAT = dt.dformat.NCHW
 
-    def __init__(self, data_dir = '_asset/data/cifar10',
-                 batch_size=128, valid_size=128,
+    TRAIN_DIR = 'train'
+    VALIDATION_DIR = 'valid'
+    TEST_DIR = 'valid'
+
+    MEAN_RGB = (0.485, 0.456, 0.406)
+    VAR_RGB = (0.229, 0.224, 0.225)
+
+    def __init__(self, data_dir = '/data/imagenet',
+                 batch_size=32, valid_size=32,
                  out_height=IMAGE_HEIGHT, out_width=IMAGE_WIDTH, distorted=False,
                  num_workers=1, pin_memory=True,
                  shuffle=True, data_format=dt.dformat.DEFAULT):
-        super(Cifar10, self).__init__()
-        self.tag = "DATA::CIFAR10"
+        super(ImageNet, self).__init__()
+        self.tag = "DATA::IMAGENET"
 
         self._data_dir = data_dir
 
@@ -59,13 +68,13 @@ class Cifar10(BaseData):
         self.valid.batch_size = self._valid_size
         self.test.batch_size = self._test_size
 
-        self.train.num_total = Cifar10.TRAIN_NUM_PER_EPOCH
-        self.valid.num_total = Cifar10.VALID_NUM_PER_EPOCH
-        self.test.num_total = Cifar10.TEST_NUM_PER_EPOCH
+        self.train.num_total = ImageNet.TRAIN_NUM_PER_EPOCH
+        self.valid.num_total = ImageNet.VALID_NUM_PER_EPOCH
+        self.test.num_total = ImageNet.TEST_NUM_PER_EPOCH
 
-        self.train.num_batch = int(math.ceil(Cifar10.TRAIN_NUM_PER_EPOCH / self._batch_size / hvd.size()))
-        self.valid.num_batch = int(math.ceil(Cifar10.VALID_NUM_PER_EPOCH / self._valid_size / hvd.size()))
-        self.test.num_batch = int(math.ceil(Cifar10.TEST_NUM_PER_EPOCH / self._test_size / hvd.size()))
+        self.train.num_batch = int(math.ceil(ImageNet.TRAIN_NUM_PER_EPOCH / self._batch_size / hvd.size()))
+        self.valid.num_batch = int(math.ceil(ImageNet.VALID_NUM_PER_EPOCH / self._valid_size / hvd.size()))
+        self.test.num_batch = int(math.ceil(ImageNet.TEST_NUM_PER_EPOCH / self._test_size / hvd.size()))
 
         self.classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
@@ -75,19 +84,23 @@ class Cifar10(BaseData):
         dt.trace(dt.DC.DATA, "[{}] load data".format(self.tag))
 
         transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
+            transforms.RandomSizedCrop(224, scale=(0.2, 1.0)),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize(MEAN_RGB, VAR_RGB),
         ])
 
         transform_test = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
             transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Normalize(MEAN_RGB, VAR_RGB),
         ])
 
         kwargs = {'num_workers': self._num_workers, 'pin_memory': True} if self._pin_memory else {}
-        self.train.dataset = datasets.CIFAR10(self._data_dir, train=True, download=True, transform=transform_train)
+
+        train_dataset_root = os.path.join(self._data_dir, TRAIN_DIR)
+        self.train.dataset = datasets.ImageFolder(root=train_dataset_root, transform=transform_train)
         if dt.train.is_mp():
             # Horovod: use DistributedSampler to partition the training data.
             self.train.sampler = torch.utils.data.distributed.DistributedSampler(
@@ -98,7 +111,8 @@ class Cifar10(BaseData):
             self.train.loader = torch.utils.data.DataLoader(self.train.dataset,
                 batch_size=self._batch_size, shuffle=self._shuffle, **kwargs)
 
-        self.valid.dataset = datasets.CIFAR10(self._data_dir, train=False, transform=transform_test)
+        valid_dataset_root = os.path.join(self._data_dir, VALIDATION_DIR)
+        self.valid.dataset = datasets.ImageFolder(root=valid_dataset_root, transform=transform_test)
         if dt.train.is_mp():
             # Horovod: use DistributedSampler to partition the validation data.
             self.valid.sampler = torch.utils.data.distributed.DistributedSampler(
@@ -109,7 +123,8 @@ class Cifar10(BaseData):
             self.valid.loader = torch.utils.data.DataLoader(self.valid.dataset,
                 batch_size=self._valid_size, shuffle=False, **kwargs)
 
-        self.test.dataset = datasets.CIFAR10(self._data_dir, train=False, transform=transform_test)
+        test_dataset_root = os.path.join(self._data_dir, TEST_DIR)
+        self.test.dataset = datasets.ImageFolder(root=test_dataset_root, transform=transform_test)
         if dt.train.is_mp():
             # Horovod: use DistributedSampler to partition the test data.
             self.test.sampler = torch.utils.data.distributed.DistributedSampler(

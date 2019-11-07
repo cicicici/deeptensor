@@ -65,4 +65,3 @@ class CallGroup(object):
     def end(self, **kwargs):
         for cb in self._callbacks:
             cb.end(**kwargs)
-

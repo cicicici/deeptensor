@@ -141,4 +141,3 @@ class BaseEstimator(object):
 
     def inference(self, tensor, checkpoint, batch_size=None):
         return None
-

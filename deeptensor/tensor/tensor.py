@@ -103,4 +103,3 @@ def get_dim(tensor, data_format):
     axis = get_channel_axis(tensor, data_format)
     dim = shape[axis]
     return dim
-

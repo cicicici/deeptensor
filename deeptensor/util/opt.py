@@ -102,4 +102,3 @@ class Opt(collections.MutableMapping):
     @staticmethod
     def from_file(fname):
         return opt_from_file(fname)
-

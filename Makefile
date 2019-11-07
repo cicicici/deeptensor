@@ -19,4 +19,3 @@ uninstall: clean
 
 clean:
 	rm -rf build $(PROJECT).egg-info dist
-

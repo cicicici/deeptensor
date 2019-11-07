@@ -57,4 +57,3 @@ def dbg_lvl(level):
 
 def dbg_vld(channel, level):
     return dbg_chn(channel) and dbg_lvl(level)
-

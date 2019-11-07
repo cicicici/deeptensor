@@ -59,4 +59,3 @@ def move_file(src, dst):
 
 def is_link(filename):
     return os.path.islink(filename)
-

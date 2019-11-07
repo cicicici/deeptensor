@@ -230,4 +230,3 @@ def summary_model_wass(model, show_weights=True, show_parameters=True):
 
     tmpstr = tmpstr + ')'
     return tmpstr
-

@@ -14,4 +14,3 @@ def print_tensor_info(tensor, name="Tensor"):
 def print_pp(obj, name="Obj"):
     global pp
     pp.pprint(obj)
-

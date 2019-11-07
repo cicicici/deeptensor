@@ -124,4 +124,3 @@ def summary_tensor_clamp(tag, tensor, min_val, max_val, global_step=None, writer
     tensor_abs = torch.clamp(tensor, min_val, max_val)
     writer.add_scalar(tag, torch.mean(tensor_abs).item(), global_step=global_step)
     writer.add_histogram(tag+'-h', tensor_abs, global_step=global_step)
-

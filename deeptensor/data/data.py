@@ -32,4 +32,3 @@ class BaseData(object):
     @abstractmethod
     def load_data(self):
         return self
-

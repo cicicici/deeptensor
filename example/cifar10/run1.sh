@@ -6,8 +6,8 @@ COMMIT=$(git rev-parse --short HEAD)
 HOST=$(hostname | tr '-' '\n' | head -n 3 | tail -1)
 DATE=$(date +%Y%m%d)
 
-#LAUNCH=../launch/launch_gpu_4.sh
-LAUNCH=../launch/launch_multi.sh
+LAUNCH=../launch/launch_gpu_1.sh
+#LAUNCH=../launch/launch_multi.sh
 APP=cifar10_conv.py
 TRACE=--trace
 
@@ -26,7 +26,7 @@ echo "APP: $APP"
 echo "INI: $INI"
 echo "ARGS: $@"
 
-for i in {1..8}
+for i in {1..1}
 do
    echo ">>>> Run $i:"
 

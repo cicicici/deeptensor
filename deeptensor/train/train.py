@@ -26,6 +26,7 @@ _learning_rate = None
 def init_library():
     # Horovod: initialize library.
     hvd.init()
+    torch.backends.cudnn.benchmark = True
 
 def init_device(opt):
     global _use_cuda
@@ -375,4 +376,3 @@ def train(**kwargs):
     #    torch.save(est.model().state_dict(), "mnist_cnn.pt")
 
     opt.summary_writer.close()
-

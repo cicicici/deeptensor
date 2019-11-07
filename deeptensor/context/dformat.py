@@ -39,4 +39,3 @@ def dformat_chk_conv_images(images, in_fmt, out_fmt):
     elif in_fmt == dformat.NCHW and out_fmt == dformat.NHWC:
         images = images.permute(0, 2, 3, 1)
     return images
-

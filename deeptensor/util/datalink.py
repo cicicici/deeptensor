@@ -236,4 +236,3 @@ def datalink_send_opt(opt):
     global _datalink
     if _datalink is not None:
         _datalink.send_opt(opt)
-

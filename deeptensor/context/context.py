@@ -125,4 +125,3 @@ def dec_sugar_func(func):
         return out
 
     return wrapper
-

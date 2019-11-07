@@ -36,4 +36,3 @@ def search_text(text, pattern, find_all=True, ignore_case=False):
                 break
 
     return findings
-

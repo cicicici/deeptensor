@@ -43,4 +43,3 @@ def split_list(line_list, parts, rand=False):
             splits[i%parts].append(line)
 
     return splits
-

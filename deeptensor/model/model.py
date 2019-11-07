@@ -22,4 +22,3 @@ def load(model, fname):
         return dt.Opt.from_dict(checkpoint['model_params'])
     else:
         return None
-

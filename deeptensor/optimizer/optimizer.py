@@ -23,4 +23,3 @@ def load(optimizer, fname):
         return dt.Opt.from_dict(checkpoint['optimizer_params'])
     else:
         return None
-
