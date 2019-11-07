@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import os
 import math
 
 import deeptensor as dt
@@ -13,9 +14,6 @@ from deeptensor.data import BaseData
 
 
 class ImageNet(BaseData):
-
-    ORIG_IMAGE_SIZE = 224
-    ORIG_LABEL_SIZE = 1
 
     NUM_CHANNELS = 3
     IMAGE_HEIGHT = 224
@@ -84,22 +82,22 @@ class ImageNet(BaseData):
         dt.trace(dt.DC.DATA, "[{}] load data".format(self.tag))
 
         transform_train = transforms.Compose([
-            transforms.RandomSizedCrop(224, scale=(0.2, 1.0)),
+            transforms.RandomResizedCrop(224, scale=(0.2, 1.0)),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(MEAN_RGB, VAR_RGB),
+            transforms.Normalize(ImageNet.MEAN_RGB, ImageNet.VAR_RGB),
         ])
 
         transform_test = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
-            transforms.Normalize(MEAN_RGB, VAR_RGB),
+            transforms.Normalize(ImageNet.MEAN_RGB, ImageNet.VAR_RGB),
         ])
 
         kwargs = {'num_workers': self._num_workers, 'pin_memory': True} if self._pin_memory else {}
 
-        train_dataset_root = os.path.join(self._data_dir, TRAIN_DIR)
+        train_dataset_root = os.path.join(self._data_dir, ImageNet.TRAIN_DIR)
         self.train.dataset = datasets.ImageFolder(root=train_dataset_root, transform=transform_train)
         if dt.train.is_mp():
             # Horovod: use DistributedSampler to partition the training data.
@@ -111,7 +109,7 @@ class ImageNet(BaseData):
             self.train.loader = torch.utils.data.DataLoader(self.train.dataset,
                 batch_size=self._batch_size, shuffle=self._shuffle, **kwargs)
 
-        valid_dataset_root = os.path.join(self._data_dir, VALIDATION_DIR)
+        valid_dataset_root = os.path.join(self._data_dir, ImageNet.VALIDATION_DIR)
         self.valid.dataset = datasets.ImageFolder(root=valid_dataset_root, transform=transform_test)
         if dt.train.is_mp():
             # Horovod: use DistributedSampler to partition the validation data.
@@ -123,7 +121,7 @@ class ImageNet(BaseData):
             self.valid.loader = torch.utils.data.DataLoader(self.valid.dataset,
                 batch_size=self._valid_size, shuffle=False, **kwargs)
 
-        test_dataset_root = os.path.join(self._data_dir, TEST_DIR)
+        test_dataset_root = os.path.join(self._data_dir, ImageNet.TEST_DIR)
         self.test.dataset = datasets.ImageFolder(root=test_dataset_root, transform=transform_test)
         if dt.train.is_mp():
             # Horovod: use DistributedSampler to partition the test data.

@@ -73,7 +73,7 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
 # Train
 with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
             lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve):
-    dt.train.train(args=ARGS, est_class = Cifar10Estimator, est_cfg=dt.Opt(),
+    dt.train.train(args=ARGS, est_class=Cifar10Estimator, est_cfg=dt.Opt(),
                    batch_size=ARGS.batch_size, valid_size=ARGS.valid_size,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
