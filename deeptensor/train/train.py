@@ -300,9 +300,10 @@ def train(**kwargs):
 
             loss = est.criterion(logits, labels)
 
-            est.optimizer.zero_grad()
-            loss.backward()
-            est.optimizer.step()
+            if not opt.valid_only:
+                est.optimizer.zero_grad()
+                loss.backward()
+                est.optimizer.step()
 
             metric = est.metric(logits, labels, opt.is_training)
 
@@ -312,6 +313,10 @@ def train(**kwargs):
                                   logits=logits, loss=loss, metric=metric)
 
             global_step_inc()
+
+            if opt.valid_only:
+                # Dummy train 1 batch to bypass None data for stats
+                break
 
         train_hooks.post_epoch(step=global_step(), epoch=epoch)
 
@@ -348,7 +353,12 @@ def train(**kwargs):
 
             valid_hooks.post_epoch(step=global_step(), epoch=epoch)
 
+        if opt.valid_only:
+            # Only need 1 epoch for valid
+            break
+
         if is_chief():
+            # Save checkpoint
             if opt.save_interval > 0 and (epoch+1) % opt.save_interval == 0:
                 dt.model.save(est.model, opt.saver.model_latest,
                               valid_loss=opt.stats.valid_loss,
@@ -361,11 +371,13 @@ def train(**kwargs):
         # End of epoch
         opt.summary_writer.flush()
 
-    if is_chief():
+    # Save final model
+    if not opt.valid_only and is_chief():
         dt.model.save(est.model, opt.saver.model_final,
                       valid_loss=opt.stats.valid_loss,
                       valid_metric_name=opt.stats.valid_metric_name,
                       valid_metric=opt.stats.valid_metric)
+
     train_end = time.time()
     train_hooks.end(train_end=train_end)
     valid_hooks.end(train_end=train_end)

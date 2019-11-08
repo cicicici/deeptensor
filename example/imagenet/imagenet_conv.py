@@ -5,6 +5,7 @@ import deeptensor as dt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
 import horovod.torch as hvd
 
 import warnings
@@ -54,7 +55,51 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
     def build_model(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build model".format(self.tag, type(self).__name__))
 
-        self._model = dt.model.imagenet.FairNasA()         # 8-gpu
+        #if dt.train.is_chief():
+        #    dt.print_pp(torchvision.models.__dict__)
+
+        #arch = 'alexnet'
+        #arch = 'densenet121'
+        #arch = 'densenet161'
+        #arch = 'densenet169'
+        #arch = 'densenet201'
+        #arch = 'googlenet'
+        #arch = 'inception_v3'
+        #arch = 'mnasnet0_5'
+        #arch = 'mnasnet0_75'
+        #arch = 'mnasnet1_0'
+        #arch = 'mnasnet1_3'
+        #arch = 'mobilenet_v2'
+        #arch = 'resnet18'
+        #arch = 'resnet34'
+        #arch = 'resnet50'
+        #arch = 'resnet101'
+        #arch = 'resnet152'
+        #arch = 'resnext50_32x4d'
+        arch = 'resnext101_32x8d'
+        #arch = 'shufflenet_v2_x0_5'
+        #arch = 'shufflenet_v2_x1_0'
+        #arch = 'shufflenet_v2_x1_5'
+        #arch = 'shufflenet_v2_x2_0'
+        #arch = 'squeezenet1_0'
+        #arch = 'squeezenet1_1'
+        #arch = 'vgg11'
+        #arch = 'vgg11_bn'
+        #arch = 'vgg13'
+        #arch = 'vgg13_bn'
+        #arch = 'vgg16'
+        #arch = 'vgg16_bn'
+        #arch = 'vgg19'
+        #arch = 'vgg19_bn'
+        #arch = 'wide_resnet50_2'
+        #arch = 'wide_resnet101_2'
+
+        #pretrained = True
+        pretrained = False
+
+        self._model = torchvision.models.__dict__[arch](pretrained=pretrained)
+
+        #self._model = dt.model.imagenet.FairNasA()         # 8-gpu
 
         return True
 
@@ -72,7 +117,7 @@ with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
-                   tf_random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0)
+                   tf_random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
 
 #dt.util.datalink_close()
 
