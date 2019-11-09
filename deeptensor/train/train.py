@@ -131,7 +131,7 @@ def init_saver(opt):
     # checkpoint
     opt.saver = dt.Opt(model_latest = opt.args.inst_dir + '/model_latest.pt',
                        optimizer_latest = opt.args.inst_dir + '/optimizer_latest.pt',
-                       model_final = opt.args.inst_dir + '/model_final.pt')
+                       model_best = opt.args.inst_dir + '/model_best.pt')
 
 def adjust_learning_rate(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -168,7 +168,7 @@ def train(**kwargs):
 
     # Stats
     opt += dt.Opt(stats=dt.Opt(avg_loss=None, train_metric_name=None, train_metric=None,
-                               valid_loss=None, valid_metric_name=None, valid_metric=None,
+                               valid_loss=None, valid_metric_name=None, valid_metric=None, valid_metric_max=None,
                                train_speed=None, valid_speed=None))
 
     # Saver
@@ -368,15 +368,20 @@ def train(**kwargs):
                                   step=global_step(), epoch=epoch,
                                   lr_val_base=get_lr_val_base(), stats=opt.stats)
 
+            # Save best model
+            if not opt.valid_only and \
+                (opt.stats.valid_metric_max is None or \
+                 opt.stats.valid_metric > opt.stats.valid_metric_max):
+                dt.model.save(est.model, opt.saver.model_best,
+                              valid_loss=opt.stats.valid_loss,
+                              valid_metric_name=opt.stats.valid_metric_name,
+                              valid_metric=opt.stats.valid_metric,
+                              step=global_step(), epoch=epoch,
+                              lr_val_base=get_lr_val_base(), stats=opt.stats)
+                opt.stats.valid_metric_max = opt.stats.valid_metric
+
         # End of epoch
         opt.summary_writer.flush()
-
-    # Save final model
-    if not opt.valid_only and is_chief():
-        dt.model.save(est.model, opt.saver.model_final,
-                      valid_loss=opt.stats.valid_loss,
-                      valid_metric_name=opt.stats.valid_metric_name,
-                      valid_metric=opt.stats.valid_metric)
 
     train_end = time.time()
     train_hooks.end(train_end=train_end)

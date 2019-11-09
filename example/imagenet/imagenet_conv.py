@@ -72,11 +72,11 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
         #arch = 'mobilenet_v2'
         #arch = 'resnet18'
         #arch = 'resnet34'
-        #arch = 'resnet50'
+        arch = 'resnet50'
         #arch = 'resnet101'
         #arch = 'resnet152'
         #arch = 'resnext50_32x4d'
-        arch = 'resnext101_32x8d'
+        #arch = 'resnext101_32x8d'
         #arch = 'shufflenet_v2_x0_5'
         #arch = 'shufflenet_v2_x1_0'
         #arch = 'shufflenet_v2_x1_5'
@@ -117,7 +117,6 @@ with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
-                   tf_random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
+                   random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
 
 #dt.util.datalink_close()
-
