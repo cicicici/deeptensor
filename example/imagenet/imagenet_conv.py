@@ -101,6 +101,7 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
 
         #self._model = dt.model.imagenet.FairNasA()         # 8-gpu
 
+        dt.info(dt.DC.TRAIN, "arch {}, pretrained {}".format(arch, pretrained))
         return True
 
     def post_model(self):

@@ -131,7 +131,8 @@ def init_saver(opt):
     # checkpoint
     opt.saver = dt.Opt(model_latest = opt.args.inst_dir + '/model_latest.pt',
                        optimizer_latest = opt.args.inst_dir + '/optimizer_latest.pt',
-                       model_best = opt.args.inst_dir + '/model_best.pt')
+                       model_best = opt.args.inst_dir + '/model_best.pt',
+                       optimizer_best = opt.args.inst_dir + '/optimizer_best.pt')
 
 def adjust_learning_rate(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -378,6 +379,11 @@ def train(**kwargs):
                               valid_metric=opt.stats.valid_metric,
                               step=global_step(), epoch=epoch,
                               lr_val_base=get_lr_val_base(), stats=opt.stats)
+                dt.optimizer.save(est.optimizer, opt.saver.optimizer_best,
+                                  step=global_step(), epoch=epoch,
+                                  lr_val_base=get_lr_val_base(), stats=opt.stats,
+                                  optim=opt.optim, momentum=opt.momentum, weight_decay=opt.weight_decay,
+                                  lr_initial=opt.lr_initial, lr_minimal=opt.lr_minimal, lr_curve=opt.lr_curve)
                 opt.stats.valid_metric_max = opt.stats.valid_metric
 
         # End of epoch
