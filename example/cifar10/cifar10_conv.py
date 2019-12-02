@@ -39,7 +39,7 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
     def build_data(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build data".format(self.tag, type(self).__name__))
         args = self._ctx.args
-        data = dt.data.Cifar10(data_dir='/data/cifar10',
+        data = dt.data.Cifar10(data_dir='/datasets/cifar10',
                                batch_size=args.batch_size, valid_size=args.valid_size,
                                num_workers=1, pin_memory=self.use_cuda)
         data.init_data()

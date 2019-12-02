@@ -44,7 +44,7 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
     def build_data(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build data".format(self.tag, type(self).__name__))
         args = self._ctx.args
-        data = dt.data.ImageNet(data_dir='/data/imagenet',
+        data = dt.data.ImageNet(data_dir='/datasets/imagenet',
                                 batch_size=args.batch_size, valid_size=args.valid_size,
                                 num_workers=4, pin_memory=self.use_cuda)
         data.init_data()
