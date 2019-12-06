@@ -46,7 +46,7 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
         args = self._ctx.args
         data = dt.data.ImageNet(data_dir='/datasets/imagenet',
                                 batch_size=args.batch_size, valid_size=args.valid_size,
-                                out_size=224, resize_size=256,
+                                out_size=224, resize_size=224,
                                 num_workers=4, pin_memory=self.use_cuda)
         data.init_data()
         data.load_data()
