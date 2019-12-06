@@ -46,6 +46,7 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
         args = self._ctx.args
         data = dt.data.ImageNet(data_dir='/datasets/imagenet',
                                 batch_size=args.batch_size, valid_size=args.valid_size,
+                                out_size=224, resize_size=256,
                                 num_workers=4, pin_memory=self.use_cuda)
         data.init_data()
         data.load_data()
@@ -72,7 +73,7 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
         #arch = 'mobilenet_v2'
         #arch = 'resnet18'
         #arch = 'resnet34'
-        arch = 'resnet50'
+        # arch = 'resnet50'
         #arch = 'resnet101'
         #arch = 'resnet152'
         #arch = 'resnext50_32x4d'
@@ -97,11 +98,18 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
         #pretrained = True
         pretrained = False
 
-        self._model = torchvision.models.__dict__[arch](pretrained=pretrained)
+        #self._model = torchvision.models.__dict__[arch](pretrained=pretrained)
+        #dt.info(dt.DC.TRAIN, "arch {}, pretrained {}".format(arch, pretrained))
 
         #self._model = dt.model.imagenet.FairNasA()         # 8-gpu
 
+        arch = 'efficientnet-b0'
+        if pretrained:
+            self._model = dt.model.EfficientNet.from_pretrained(arch)
+        else:
+            self._model = dt.model.EfficientNet.from_name(arch)
         dt.info(dt.DC.TRAIN, "arch {}, pretrained {}".format(arch, pretrained))
+
         return True
 
     def post_model(self):

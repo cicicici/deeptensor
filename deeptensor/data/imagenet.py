@@ -2,8 +2,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os
 import math
+import PIL
 
 import deeptensor as dt
+
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
@@ -16,8 +18,8 @@ from deeptensor.data import BaseData
 class ImageNet(BaseData):
 
     NUM_CHANNELS = 3
-    IMAGE_HEIGHT = 224
-    IMAGE_WIDTH = 224
+    IMAGE_SIZE = 224
+    RESIZE_SIZE = 256
     NUM_CLASSES = 1000
 
     TRAIN_NUM_PER_EPOCH = 1281167
@@ -30,12 +32,12 @@ class ImageNet(BaseData):
     VALIDATION_DIR = 'valid'
     TEST_DIR = 'valid'
 
-    MEAN_RGB = (0.485, 0.456, 0.406)
-    VAR_RGB = (0.229, 0.224, 0.225)
+    MEAN_RGB = [0.485, 0.456, 0.406]
+    VAR_RGB = [0.229, 0.224, 0.225]
 
-    def __init__(self, data_dir = '/data/imagenet',
+    def __init__(self, data_dir = '/datasets/imagenet',
                  batch_size=32, valid_size=32,
-                 out_height=IMAGE_HEIGHT, out_width=IMAGE_WIDTH, distorted=False,
+                 out_size=IMAGE_SIZE, resize_size=RESIZE_SIZE,
                  num_workers=1, pin_memory=True,
                  shuffle=True, data_format=dt.dformat.DEFAULT):
         super(ImageNet, self).__init__()
@@ -47,9 +49,8 @@ class ImageNet(BaseData):
         self._valid_size = valid_size
         self._test_size = valid_size
 
-        self._out_height = out_height
-        self._out_width = out_width
-        self._distorted = distorted
+        self._out_size = out_size
+        self._resize_size = resize_size
 
         self._num_workers = num_workers
         self._pin_memory = pin_memory
@@ -82,17 +83,17 @@ class ImageNet(BaseData):
         dt.trace(dt.DC.DATA, "[{}] load data".format(self.tag))
 
         transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(224, scale=(0.2, 1.0)),
+            transforms.RandomResizedCrop(self._out_size, scale=(0.2, 1.0)),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(ImageNet.MEAN_RGB, ImageNet.VAR_RGB),
+            transforms.Normalize(mean=ImageNet.MEAN_RGB, std=ImageNet.VAR_RGB),
         ])
 
         transform_test = transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
+            transforms.Resize(self._resize_size, interpolation=PIL.Image.BICUBIC),
+            transforms.CenterCrop(self._out_size),
             transforms.ToTensor(),
-            transforms.Normalize(ImageNet.MEAN_RGB, ImageNet.VAR_RGB),
+            transforms.Normalize(mean=ImageNet.MEAN_RGB, std=ImageNet.VAR_RGB),
         ])
 
         kwargs = {'num_workers': self._num_workers, 'pin_memory': True} if self._pin_memory else {}
