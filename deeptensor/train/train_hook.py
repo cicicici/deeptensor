@@ -160,8 +160,12 @@ class ValidProgressHook(TrainHook):
 
         self._ctx.stats.valid_loss = dt.train.mp_average(self._loss_total/self._num_total, 'epoch_valid_loss')
         #dt.trace(dt.DC.TRAIN, '[EPOCH {}] local {}, avg {}'.format(epoch, self._loss_total/self._num_total, self._ctx.stats.valid_loss))
-        train_avg_loss = dt.train.mp_average(self._ctx.stats.avg_loss, 'epoch_avg_loss')
-        train_metric = dt.train.mp_average(self._ctx.stats.train_metric, 'epoch_train_metric')
+        if self._ctx.valid_only:
+            train_avg_loss = 0
+            train_metric = 0
+        else:
+            train_avg_loss = dt.train.mp_average(self._ctx.stats.avg_loss, 'epoch_avg_loss')
+            train_metric = dt.train.mp_average(self._ctx.stats.train_metric, 'epoch_train_metric')
 
         dt.vis.add_scalar('valid/image/s', self._ctx.stats.valid_speed)
         dt.vis.add_scalar('valid/avg_loss', train_avg_loss)

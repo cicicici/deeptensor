@@ -169,8 +169,8 @@ def train(**kwargs):
 
     # Stats
     opt += dt.Opt(stats=dt.Opt(avg_loss=None, train_metric_name=None, train_metric=None,
-                               valid_loss=None, valid_metric_name=None, valid_metric=None, valid_metric_max=None,
-                               train_speed=None, valid_speed=None))
+                               valid_loss=0, valid_metric_name='', valid_metric=0, valid_metric_max=None,
+                               train_speed=0, valid_speed=0))
 
     # Saver
     opt += dt.Opt(epoch_done=-1)
@@ -244,10 +244,11 @@ def train(**kwargs):
 
     # Hooks
     train_hooks = dt.train.TrainCallGroup(opt)
-    train_hooks.add(dt.train.LearningRateHook(opt, lr_val=get_lr_val(), lr_minimal=opt.lr_minimal, lr_curve=opt.lr_curve, optimizer=est.optimizer))
-    for hook in est.train_hooks:
-        train_hooks.add(hook)
-    train_hooks.add(dt.train.TrainProgressHook(opt, every_n_steps=1))
+    if not opt.valid_only:
+        train_hooks.add(dt.train.LearningRateHook(opt, lr_val=get_lr_val(), lr_minimal=opt.lr_minimal, lr_curve=opt.lr_curve, optimizer=est.optimizer))
+        for hook in est.train_hooks:
+            train_hooks.add(hook)
+        train_hooks.add(dt.train.TrainProgressHook(opt, every_n_steps=1))
 
     valid_hooks = dt.train.TrainCallGroup(opt)
     for hook in est.valid_hooks:
@@ -258,68 +259,65 @@ def train(**kwargs):
     est.pre_train()
 
     train_start = time.time()
-    train_hooks.begin(train_start=train_start)
+    if not opt.valid_only:
+        train_hooks.begin(train_start=train_start)
     valid_hooks.begin(train_start=train_start)
 
     for epoch in range(0, opt.max_ep):
 
         # Train
-        est.model.train()
-        opt.is_training = True
-        opt.is_eval = False
-        if est.data.train.sampler is not None:
-            # Horovod: set epoch to sampler for shuffling.
-            est.data.train.sampler.set_epoch(epoch)
+        if not opt.valid_only:
+            est.model.train()
+            opt.is_training = True
+            opt.is_eval = False
+            if est.data.train.sampler is not None:
+                # Horovod: set epoch to sampler for shuffling.
+                est.data.train.sampler.set_epoch(epoch)
 
-        train_hooks.pre_epoch(step=global_step(), epoch=epoch,
-                              epoch_size=est.data.train.num_batch,
-                              batch_size=est.data.train.batch_size)
+            train_hooks.pre_epoch(step=global_step(), epoch=epoch,
+                                  epoch_size=est.data.train.num_batch,
+                                  batch_size=est.data.train.batch_size)
 
-        # Skip previous done epochs
-        if epoch <= opt.epoch_done:
-            train_hooks.post_epoch(step=global_step(), epoch=epoch)
-            continue
+            # Skip previous done epochs
+            if epoch <= opt.epoch_done:
+                train_hooks.post_epoch(step=global_step(), epoch=epoch)
+                continue
 
-        dt.vis.add_scalar('train/epoch', epoch+1)
-        dt.vis.add_scalar('train/lr', get_lr_val())
+            dt.vis.add_scalar('train/epoch', epoch+1)
+            dt.vis.add_scalar('train/lr', get_lr_val())
 
-        for index, (images, labels) in enumerate(train_loader):
-            size = len(images)
-            train_hooks.pre_step(step=global_step(), epoch=epoch,
-                                 index=index, size=size)
+            for index, (images, labels) in enumerate(train_loader):
+                size = len(images)
+                train_hooks.pre_step(step=global_step(), epoch=epoch,
+                                     index=index, size=size)
 
-            if use_cuda():
-                images, labels = images.cuda(), labels.cuda()
+                if use_cuda():
+                    images, labels = images.cuda(), labels.cuda()
 
-            # Save graph
-            if global_step() == 0:
-                #images, labels = next(iter(train_loader))
-                dt.vis.add_graph(est.model, images.to(est.device))
-                dt.vis.add_images_grid('model/inputs', images)
+                # Save graph
+                if global_step() == 0:
+                    #images, labels = next(iter(train_loader))
+                    dt.vis.add_graph(est.model, images.to(est.device))
+                    dt.vis.add_images_grid('model/inputs', images)
 
-            logits = est.forward(images, opt.is_training)
+                logits = est.forward(images, opt.is_training)
 
-            loss = est.criterion(logits, labels)
+                loss = est.criterion(logits, labels)
 
-            if not opt.valid_only:
                 est.optimizer.zero_grad()
                 loss.backward()
                 est.optimizer.step()
 
-            metric = est.metric(logits, labels, opt.is_training)
+                metric = est.metric(logits, labels, opt.is_training)
 
-            train_hooks.post_step(step=global_step(), epoch=epoch,
-                                  index=index, size=size,
-                                  images=images, labels=labels,
-                                  logits=logits, loss=loss, metric=metric)
+                train_hooks.post_step(step=global_step(), epoch=epoch,
+                                      index=index, size=size,
+                                      images=images, labels=labels,
+                                      logits=logits, loss=loss, metric=metric)
 
-            global_step_inc()
+                global_step_inc()
 
-            if opt.valid_only:
-                # Dummy train 1 batch to bypass None data for stats
-                break
-
-        train_hooks.post_epoch(step=global_step(), epoch=epoch)
+            train_hooks.post_epoch(step=global_step(), epoch=epoch)
 
         # Validation
         if opt.validate_ep > 0 and (epoch+1) % opt.validate_ep == 0:
@@ -370,9 +368,8 @@ def train(**kwargs):
                                   lr_val_base=get_lr_val_base(), stats=opt.stats)
 
             # Save best model
-            if not opt.valid_only and \
-                (opt.stats.valid_metric_max is None or \
-                 opt.stats.valid_metric > opt.stats.valid_metric_max):
+            if (opt.stats.valid_metric_max is None or \
+                opt.stats.valid_metric > opt.stats.valid_metric_max):
                 dt.model.save(est.model, opt.saver.model_best,
                               valid_loss=opt.stats.valid_loss,
                               valid_metric_name=opt.stats.valid_metric_name,
@@ -390,7 +387,8 @@ def train(**kwargs):
         opt.summary_writer.flush()
 
     train_end = time.time()
-    train_hooks.end(train_end=train_end)
+    if not opt.valid_only:
+        train_hooks.end(train_end=train_end)
     valid_hooks.end(train_end=train_end)
     est.post_train()
 
