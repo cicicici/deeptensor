@@ -19,7 +19,7 @@ class ImageNet(BaseData):
 
     NUM_CHANNELS = 3
     IMAGE_SIZE = 224
-    RESIZE_SIZE = 256
+    CROP_RATIO = 0.875
     NUM_CLASSES = 1000
 
     TRAIN_NUM_PER_EPOCH = 1281167
@@ -37,7 +37,7 @@ class ImageNet(BaseData):
 
     def __init__(self, data_dir = '/datasets/imagenet',
                  batch_size=32, valid_size=32,
-                 out_size=IMAGE_SIZE, resize_size=RESIZE_SIZE,
+                 out_size=IMAGE_SIZE, crop_ratio=CROP_RATIO,
                  num_workers=1, pin_memory=True,
                  shuffle=True, data_format=dt.dformat.DEFAULT):
         super(ImageNet, self).__init__()
@@ -50,7 +50,7 @@ class ImageNet(BaseData):
         self._test_size = valid_size
 
         self._out_size = out_size
-        self._resize_size = resize_size
+        self._crop_ratio = crop_ratio
 
         self._num_workers = num_workers
         self._pin_memory = pin_memory
@@ -83,14 +83,14 @@ class ImageNet(BaseData):
         dt.trace(dt.DC.DATA, "[{}] load data".format(self.tag))
 
         transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(self._out_size, scale=(0.2, 1.0)),
+            transforms.RandomResizedCrop(self._out_size, scale=(0.08, 1.0)),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=ImageNet.MEAN_RGB, std=ImageNet.VAR_RGB),
         ])
 
         transform_test = transforms.Compose([
-            transforms.Resize(self._resize_size, interpolation=PIL.Image.BICUBIC),
+            transforms.Resize(int(self._out_size / self._crop_ratio), interpolation=PIL.Image.BICUBIC),
             transforms.CenterCrop(self._out_size),
             transforms.ToTensor(),
             transforms.Normalize(mean=ImageNet.MEAN_RGB, std=ImageNet.VAR_RGB),
