@@ -134,4 +134,7 @@ class ImageNet(BaseData):
             self.test.loader = torch.utils.data.DataLoader(self.test.dataset,
                 batch_size=self._test_size, shuffle=False, **kwargs)
 
+        dt.trace(dt.DC.DATA, "[{}] loaded, train {}, valid {}, test {}".format(
+            self.tag, len(self.train.dataset), len(self.valid.dataset), len(self.test.dataset)))
+
         return self

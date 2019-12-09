@@ -264,6 +264,7 @@ def train(**kwargs):
     valid_hooks.begin(train_start=train_start)
 
     for epoch in range(0, opt.max_ep):
+        dryrun = (epoch <= opt.epoch_done)
 
         # Train
         if not opt.valid_only:
@@ -276,12 +277,8 @@ def train(**kwargs):
 
             train_hooks.pre_epoch(step=global_step(), epoch=epoch,
                                   epoch_size=est.data.train.num_batch,
-                                  batch_size=est.data.train.batch_size)
-
-            # Skip previous done epochs
-            if epoch <= opt.epoch_done:
-                train_hooks.post_epoch(step=global_step(), epoch=epoch)
-                continue
+                                  batch_size=est.data.train.batch_size,
+                                  dryrun=dryrun)
 
             dt.vis.add_scalar('train/epoch', epoch+1)
             dt.vis.add_scalar('train/lr', get_lr_val())
@@ -289,35 +286,48 @@ def train(**kwargs):
             for index, (images, labels) in enumerate(train_loader):
                 size = len(images)
                 train_hooks.pre_step(step=global_step(), epoch=epoch,
-                                     index=index, size=size)
+                                     index=index, size=size,
+                                     dryrun=dryrun)
 
-                if use_cuda():
-                    images, labels = images.cuda(), labels.cuda()
+                if not dryrun:
+                    if use_cuda():
+                        images, labels = images.cuda(), labels.cuda()
 
-                # Save graph
-                if global_step() == 0:
-                    #images, labels = next(iter(train_loader))
-                    dt.vis.add_graph(est.model, images.to(est.device))
-                    dt.vis.add_images_grid('model/inputs', images)
+                    # Save graph
+                    if global_step() == 0:
+                        #images, labels = next(iter(train_loader))
+                        dt.vis.add_graph(est.model, images.to(est.device))
+                        dt.vis.add_images_grid('model/inputs', images)
 
-                logits = est.forward(images, opt.is_training)
+                    logits = est.forward(images, opt.is_training)
 
-                loss = est.criterion(logits, labels)
+                    loss = est.criterion(logits, labels)
 
-                est.optimizer.zero_grad()
-                loss.backward()
-                est.optimizer.step()
+                    est.optimizer.zero_grad()
+                    loss.backward()
+                    est.optimizer.step()
 
-                metric = est.metric(logits, labels, opt.is_training)
+                    metric = est.metric(logits, labels, opt.is_training)
+                else:
+                    logits = None
+                    loss = None
+                    metric = None
 
                 train_hooks.post_step(step=global_step(), epoch=epoch,
                                       index=index, size=size,
                                       images=images, labels=labels,
-                                      logits=logits, loss=loss, metric=metric)
+                                      logits=logits, loss=loss, metric=metric,
+                                      dryrun=dryrun)
 
-                global_step_inc()
+                if not dryrun:
+                    global_step_inc()
 
-            train_hooks.post_epoch(step=global_step(), epoch=epoch)
+            train_hooks.post_epoch(step=global_step(), epoch=epoch,
+                                   dryrun=dryrun)
+
+        # Skip validation for previous done epochs
+        if dryrun:
+            continue
 
         # Validation
         if opt.validate_ep > 0 and (epoch+1) % opt.validate_ep == 0:

@@ -53,6 +53,10 @@ class TrainProgressHook(TrainHook):
 
     def pre_epoch(self, **kwargs):
         self._epoch_size = kwargs['epoch_size']
+        dryrun = kwargs['dryrun']
+
+        if dryrun:
+            return None
 
         self._epoch_start = time.time()
         self._step_total = 0
@@ -66,6 +70,10 @@ class TrainProgressHook(TrainHook):
         size = kwargs['size']
         loss = kwargs['loss']
         metric = kwargs['metric']
+        dryrun = kwargs['dryrun']
+
+        if dryrun:
+            return None
 
         self._step_total += 1
         self._num_total += size
@@ -92,6 +100,11 @@ class TrainProgressHook(TrainHook):
         return None
 
     def post_epoch(self, **kwargs):
+        dryrun = kwargs['dryrun']
+
+        if dryrun:
+            return None
+
         elapsed_time = time.time() - self._epoch_start
 
         if dt.train.is_chief():
@@ -204,12 +217,22 @@ class LearningRateHook(TrainHook):
         self._optimizer = kwargs['optimizer']
 
     def begin(self, **kwargs):
-        self._epoch_cnt = 0
+        self._step_elapsed = 0
         self._epoch_window = self._lr_curve[0][2]
         pass
 
     def pre_epoch(self, **kwargs):
-        if self._epoch_window > 0 and self._epoch_cnt >= self._epoch_window:
+        self._epoch_size = kwargs['epoch_size']
+
+    def pre_step(self, **kwargs):
+        #step = kwargs['step']
+        #epoch = kwargs['epoch']
+        #index = kwargs['index']
+
+        epoch_elapsed = self._step_elapsed / self._epoch_size
+
+        if self._epoch_window > 0 and epoch_elapsed >= self._epoch_window:
+            #dt.trace(dt.DC.TRAIN, '[EPOCH {}] step {}, index {}, epoch_elapsed {}'.format(epoch, step, index, epoch_elapsed))
 
             if self._lr_curve[0][3] != 0:
                 if self._lr_curve[0][0] == '*':
@@ -238,11 +261,11 @@ class LearningRateHook(TrainHook):
                 self._lr_curve.pop(0)
                 self._epoch_window = self._lr_curve[0][2]
 
-            self._epoch_cnt = 0
+            self._step_elapsed = 0
         return None
 
-    def post_epoch(self, **kwargs):
-        self._epoch_cnt += 1
+    def post_step(self, **kwargs):
+        self._step_elapsed += 1
         return None
 
 
