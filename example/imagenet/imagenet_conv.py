@@ -5,6 +5,7 @@ import deeptensor as dt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 import torchvision
 import horovod.torch as hvd
 
@@ -116,6 +117,16 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
             dt.summary.summary_model_patch(self._model)
             dt.info(dt.DC.TRAIN, "\n{}".format(dt.summary.summary_model_fwd(self._model, (3, 224, 224), device='cpu')))
             dt.summary.summary_model_patch(self._model, patch_fn=dt.summary.patch_clear_dt)
+
+    def build_optimizer(self):
+        #self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(),
+        #        momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
+
+        self._optimizer = dt.optimizer.RMSpropTF(self._model.parameters(), lr=dt.train.get_lr_val(),
+                alpha=0.9, eps=1e-8,
+                momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
+
+        return True
 
 # Train
 with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,

@@ -83,7 +83,7 @@ class ImageNet(BaseData):
         dt.trace(dt.DC.DATA, "[{}] load data".format(self.tag))
 
         transform_train = transforms.Compose([
-            transforms.RandomResizedCrop(self._out_size, scale=(0.08, 1.0)),
+            transforms.RandomResizedCrop(self._out_size, scale=(0.08, 1.0), interpolation=PIL.Image.BICUBIC),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=ImageNet.MEAN_RGB, std=ImageNet.VAR_RGB),
