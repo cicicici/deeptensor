@@ -18,7 +18,7 @@ TRACE=--trace
 INI_PRE=imagenet
 INI=config/$INI_PRE".ini"
 
-MAX_EP=121
+MAX_EP=450
 VALID_EP=1
 
 MODEL_DIR_PRE=$INI_PRE"."$DATE

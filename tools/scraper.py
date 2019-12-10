@@ -58,23 +58,21 @@ def scan_line(stats, line):
     patterns.append(dt.Opt(name='epoch', filter=' Epoch',
                            fields=[dt.Opt(name='ep', re='Epoch.([0-9]+?):', type=int),
                                    dt.Opt(name='lr', re='lr=([0-9.]+?):', type=float),
-                                   dt.Opt(name='gs', re='gs=([0-9.]+?)]', type=float),
+                                   dt.Opt(name='gs', re='gs=([0-9.]+?)]', type=int),
                                    dt.Opt(name='loss', re=' loss ([0-9.]+?),', type=float),
-                                   dt.Opt(name='acc', re=' acc ([0-9.]+?),', type=float),
+                                   dt.Opt(name='top1', re=' top1 ([0-9.]+?),', type=float),
                                    dt.Opt(name='imgs', re=', ([0-9.]+?) img/s', type=float),
-                                   dt.Opt(name='time', re='^\[([0-9-]+ [0-9:.]+?) ', type=str),
+                                   dt.Opt(name='time', re='^\[. ([0-9-]+_[0-9:.]+?) ', type=str),
                                   ]))
     patterns.append(dt.Opt(name='valid', filter='valid\/acc1',
                            fields=[dt.Opt(name='ep', re='Epoch.([0-9]+?):', type=int),
                                    dt.Opt(name='lr', re='lr=([0-9.]+?):', type=float),
                                    dt.Opt(name='gs', re='gs=([0-9.]+?)]', type=float),
                                    dt.Opt(name='loss', re=' loss ([0-9.]+?),', type=float),
-                                   dt.Opt(name='acc', re=' acc ([0-9.]+?),', type=float),
+                                   dt.Opt(name='top1', re=' top1 ([0-9.]+?),', type=float),
+                                   dt.Opt(name='top5', re=' top5 ([0-9.]+?),', type=float),
                                    dt.Opt(name='imgs', re=', ([0-9.]+?) img/s', type=float),
-                                   dt.Opt(name='time', re='^\[([0-9-]+ [0-9:.]+?) ', type=datetime),
-                                   dt.Opt(name='ce_mean', re='ce_mean ([0-9.]+?),', type=float),
-                                   dt.Opt(name='acc1', re='acc1 ([0-9.]+?),', type=float),
-                                   dt.Opt(name='top5', re='top5 ([0-9.]+?),', type=float),
+                                   dt.Opt(name='time', re='^\[. ([0-9-]+_[0-9:.]+?) ', type=datetime),
                                   ]))
 
     for pat in patterns:
@@ -153,7 +151,7 @@ def analyze_mode(data_dir, model_dir):
         print_data(model_stats.valid)
 
     fields = [model_dir.ljust(32),
-              df_valid['acc1'].max(),
+              df_valid['top1'].max(),
               df_valid['top5'].max(),
               df_valid['ep'].max(),
               df_valid['lr'].min(),

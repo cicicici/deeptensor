@@ -45,9 +45,9 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
     def build_data(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build data".format(self.tag, type(self).__name__))
         args = self._ctx.args
-        data = dt.data.ImageNet(data_dir='/datasets/imagenet',
+        data = dt.data.ImageNet(data_dir='/dlp_data/datasets/imagenet/ILSVRC2012',
                                 batch_size=args.batch_size, valid_size=args.valid_size,
-                                out_size=224, num_workers=4, pin_memory=self.use_cuda)
+                                out_size=380, num_workers=4, pin_memory=self.use_cuda)
         data.init_data()
         data.load_data()
         self._data = data
@@ -104,10 +104,7 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
         #self._model = dt.model.imagenet.FairNasA()         # 8-gpu
 
         arch = 'efficientnet-b0'
-        if pretrained:
-            self._model = dt.model.EfficientNet.from_pretrained(arch)
-        else:
-            self._model = dt.model.EfficientNet.from_name(arch)
+        self._model = dt.model.efficientnet.efficientnet_b0(pretrained=pretrained)
         dt.info(dt.DC.TRAIN, "arch {}, pretrained {}".format(arch, pretrained))
 
         return True
@@ -122,8 +119,8 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
         #self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(),
         #        momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
 
-        self._optimizer = dt.optimizer.RMSpropTF(self._model.parameters(), lr=dt.train.get_lr_val(),
-                alpha=0.9, eps=1e-8,
+        self._optimizer = dt.optimizer.TFRMSprop(self._model.parameters(), lr=dt.train.get_lr_val(),
+                rho=0.9, eps=1e-3,
                 momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
 
         return True
