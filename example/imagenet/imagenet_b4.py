@@ -45,9 +45,9 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
     def build_data(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build data".format(self.tag, type(self).__name__))
         args = self._ctx.args
-        data = dt.data.ImageNet(data_dir='/datasets/imagenet',
+        data = dt.data.ImageNet(data_dir='/dlp_data/datasets/imagenet/ILSVRC2012',
                                 batch_size=args.batch_size, valid_size=args.valid_size,
-                                out_size=224, num_workers=4, pin_memory=self.use_cuda)
+                                out_size=380, num_workers=4, pin_memory=self.use_cuda)
         data.init_data()
         data.load_data()
         self._data = data
@@ -103,8 +103,8 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
 
         #self._model = dt.model.imagenet.FairNasA()         # 8-gpu
 
-        arch = 'efficientnet-b0'
-        self._model = dt.model.efficientnet.efficientnet_b0(pretrained=pretrained)
+        arch = 'efficientnet-b4'
+        self._model = dt.model.efficientnet.efficientnet_b4(pretrained=pretrained)
         dt.info(dt.DC.TRAIN, "arch {}, pretrained {}".format(arch, pretrained))
 
         return True
@@ -112,7 +112,7 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
     def post_model(self):
         if dt.train.is_chief():
             dt.summary.summary_model_patch(self._model)
-            dt.info(dt.DC.TRAIN, "\n{}".format(dt.summary.summary_model_fwd(self._model, (3, 224, 224), device='cpu')))
+            dt.info(dt.DC.TRAIN, "\n{}".format(dt.summary.summary_model_fwd(self._model, (3, 380, 380), device='cpu')))
             dt.summary.summary_model_patch(self._model, patch_fn=dt.summary.patch_clear_dt)
 
     def build_optimizer(self):
