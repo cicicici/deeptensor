@@ -63,18 +63,12 @@ class Config(object):
             self.args_parser.add_argument('--idx_file', type=str, help='Index file')
             self.args_parser.add_argument('--batch_size', type=int, help='Batch size')
             self.args_parser.add_argument('--valid_size', type=int, help='Valid size')
-            self.args_parser.add_argument('--shard', type=str, help='Enable sharding for multi-gpu (true/false)')
             self.args_parser.add_argument('--data_format', type=str, help='Data format (NHWC/NCHW)')
             self.args_parser.add_argument('--model_name', type=str, help='Model name (resnet)')
             self.args_parser.add_argument('--model_type', type=str, help='Model type (v1/v2)')
             self.args_parser.add_argument('--block_type', type=str, help='Block type (basic/bottleneck)')
             self.args_parser.add_argument('--blocks', type=str, help='Blocks ([3, 3, 3])')
-            self.args_parser.add_argument('--se_ratio', type=int, help='Squeeze ratio for SE block (default: 0, suggest 4)')
-            self.args_parser.add_argument('--xt_width_ratio', type=int, help='ResNeXt: feature width ratio [*base_dim] (default: 1, suggest 2)')
-            self.args_parser.add_argument('--xt_cardinality', type=int, help='ResNeXt: cardinality (default: 0 - disabled, suggest 32)')
             self.args_parser.add_argument('--regularizer', type=str, help='Regularizer type (l1/l2/"")')
-            self.args_parser.add_argument('--conv_decay', type=float, help='Weight decay for convolution layers (1e-4)')
-            self.args_parser.add_argument('--fc_decay', type=float, help='Weight decay for fully connected layers (1e-4)')
             self.args_parser.add_argument('--optim', type=str, help='Optimizer (Adam/MaxProp/...)')
             self.args_parser.add_argument('--lr_initial', type=float, help='Initial learning rate (0.001)')
             self.args_parser.add_argument('--lr_minimal', type=float, help='Minimal learning rate (1e-8)')
@@ -82,7 +76,6 @@ class Config(object):
             self.args_parser.add_argument('--momentum', type=float, help='Optimizer momentum (0.9)')
             self.args_parser.add_argument('--beta1', type=float, help='Optimizer beta1 (0.9)')
             self.args_parser.add_argument('--beta2', type=float, help='Optimizer beta2 (0.99)')
-            self.args_parser.add_argument('--shortcut', type=str, help='Shortcut type (identity/1x1conv)')
             self.args_parser.add_argument('--class_num', type=int, help='Number of classes (10/100/1000)')
             self.args_parser.add_argument('--class_min', type=int, help='Minimal index of the first class (0)')
             self.args_parser.add_argument('--validate_ep', type=int, help='Validate every [n] epochs, set 0 to disable')
@@ -125,18 +118,12 @@ class Config(object):
             self._default_config[section]['idx_file'] = ""
             self._default_config[section]['batch_size'] = 32
             self._default_config[section]['valid_size'] = 250
-            self._default_config[section]['shard'] = True
             self._default_config[section]['data_format'] = "NCHW"
             self._default_config[section]['model_name'] = "resnet"
             self._default_config[section]['model_type'] = "v2"
             self._default_config[section]['block_type'] = "bottleneck"
             self._default_config[section]['blocks'] = [3, 4, 6, 3]
-            self._default_config[section]['se_ratio'] = 0
-            self._default_config[section]['xt_width_ratio'] = 1
-            self._default_config[section]['xt_cardinality'] = 0
             self._default_config[section]['regularizer'] = "l2"
-            self._default_config[section]['conv_decay'] = 1e-5
-            self._default_config[section]['fc_decay'] = 1e-5
             self._default_config[section]['optim'] = "Momentum"
             self._default_config[section]['lr_initial'] = 0.1
             self._default_config[section]['lr_minimal'] = 1e-8
@@ -144,8 +131,7 @@ class Config(object):
             self._default_config[section]['momentum'] = 0.9
             self._default_config[section]['beta1'] = 0.9
             self._default_config[section]['beta2'] = 0.99
-            self._default_config[section]['shortcut'] = "identity"
-            self._default_config[section]['class_num'] = 1001
+            self._default_config[section]['class_num'] = 1000
             self._default_config[section]['class_min'] = 0
             self._default_config[section]['validate_ep'] = 10
             self._default_config[section]['max_ep'] = 1000

@@ -41,12 +41,8 @@ class ClassEstimator(BaseEstimator):
         # args.class_num
         # args.block_type
         # args.blocks
-        # args.shortcut
         # args.regularizer
-        # args.conv_decay
-        # args.fc_decay
         # self._opt.data_format
-        # args.se_ratio)
 
         self._model = None
         return False

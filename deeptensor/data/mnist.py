@@ -28,7 +28,7 @@ class Mnist(BaseData):
                  batch_size=128, valid_size=128,
                  out_height=IMAGE_HEIGHT, out_width=IMAGE_WIDTH, distorted=False,
                  num_workers=1, pin_memory=True,
-                 shuffle=True, shard=False, data_format=dt.dformat.DEFAULT):
+                 shuffle=True, data_format=dt.dformat.DEFAULT):
         super(Mnist, self).__init__()
         self.tag = "DATA::MNIST"
 
@@ -46,7 +46,6 @@ class Mnist(BaseData):
         self._pin_memory = pin_memory
 
         self._shuffle = shuffle
-        self._shard = shard
         self._data_format = data_format
 
     def init_data(self):
