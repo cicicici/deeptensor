@@ -238,13 +238,13 @@ class LearningRateHook(TrainHook):
                 if self._lr_curve[0][0] == '*':
                     self._lr_val *= self._lr_curve[0][1]
                 elif self._lr_curve[0][0] == '+':
-                    self._lr_val += self._lr_curve[0][1]
+                    self._lr_val += self._lr_curve[0][1] * hvd.size()
                 elif self._lr_curve[0][0] == '-':
-                    self._lr_val -= self._lr_curve[0][1]
+                    self._lr_val -= self._lr_curve[0][1] * hvd.size()
                 elif self._lr_curve[0][0] == '/':
                     self._lr_val /= self._lr_curve[0][1]
                 elif self._lr_curve[0][0] == '=':
-                    self._lr_val = self._lr_curve[0][1]
+                    self._lr_val = self._lr_curve[0][1] * hvd.size()
                 else:
                     raise ValueError('The first element of lr curve segment must be (*,+,-,/,=)')
 
