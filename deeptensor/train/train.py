@@ -283,10 +283,17 @@ def train(**kwargs):
             dt.vis.add_scalar('train/epoch', epoch+1)
             dt.vis.add_scalar('train/lr', get_lr_val())
 
-            for index, (images, labels) in enumerate(train_loader):
-                size = len(images)
+            train_it = iter(train_loader)
+            for index in range(len(train_loader)):
+                images, labels = None, None
+                size = 0
+                if not dryrun:
+                    images, labels = next(train_it)
+                    size = len(images)
+
                 train_hooks.pre_step(step=global_step(), epoch=epoch,
                                      index=index, size=size,
+                                     images=images, labels=labels,
                                      dryrun=dryrun)
 
                 if not dryrun:
