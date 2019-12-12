@@ -119,9 +119,10 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
         #self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(),
         #        momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
 
-        self._optimizer = dt.optimizer.TFRMSprop(self._model.parameters(), lr=dt.train.get_lr_val(),
-                rho=0.9, eps=1e-3,
-                momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
+        self._optimizer = dt.optimizer.RMSpropTF(self._model.parameters(), lr=dt.train.get_lr_val(),
+                alpha=0.9, eps=1e-3,
+                momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay,
+                centered=False, decoupled_decay=False, lr_in_momentum=True)
 
         return True
 
