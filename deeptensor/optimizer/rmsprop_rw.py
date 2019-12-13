@@ -2,7 +2,7 @@ import torch
 from torch.optim import Optimizer
 
 
-class RMSpropTF(Optimizer):
+class RMSpropRW(Optimizer):
     """Implements RMSprop algorithm (TensorFlow style epsilon)
 
     NOTE: This is a direct cut-and-paste of PyTorch RMSprop with eps applied before sqrt
@@ -46,10 +46,10 @@ class RMSpropTF(Optimizer):
 
         defaults = dict(lr=lr, momentum=momentum, alpha=alpha, eps=eps, centered=centered, weight_decay=weight_decay,
                         decoupled_decay=decoupled_decay, lr_in_momentum=lr_in_momentum)
-        super(RMSpropTF, self).__init__(params, defaults)
+        super(RMSpropRW, self).__init__(params, defaults)
 
     def __setstate__(self, state):
-        super(RMSpropTF, self).__setstate__(state)
+        super(RMSpropRW, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('momentum', 0)
             group.setdefault('centered', False)

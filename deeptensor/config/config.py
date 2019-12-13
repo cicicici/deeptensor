@@ -63,19 +63,24 @@ class Config(object):
             self.args_parser.add_argument('--idx_file', type=str, help='Index file')
             self.args_parser.add_argument('--batch_size', type=int, help='Batch size')
             self.args_parser.add_argument('--valid_size', type=int, help='Valid size')
+            self.args_parser.add_argument('--out_size', type=int, help='Output size')
+            self.args_parser.add_argument('--num_workers', type=int, help='Worker threads for dataset')
             self.args_parser.add_argument('--data_format', type=str, help='Data format (NHWC/NCHW)')
             self.args_parser.add_argument('--model_name', type=str, help='Model name (resnet)')
             self.args_parser.add_argument('--model_type', type=str, help='Model type (v1/v2)')
             self.args_parser.add_argument('--block_type', type=str, help='Block type (basic/bottleneck)')
             self.args_parser.add_argument('--blocks', type=str, help='Blocks ([3, 3, 3])')
             self.args_parser.add_argument('--regularizer', type=str, help='Regularizer type (l1/l2/"")')
+            self.args_parser.add_argument('--pretrained', type=int, help='Pretrained model')
             self.args_parser.add_argument('--optim', type=str, help='Optimizer (Adam/MaxProp/...)')
             self.args_parser.add_argument('--lr_initial', type=float, help='Initial learning rate (0.001)')
             self.args_parser.add_argument('--lr_minimal', type=float, help='Minimal learning rate (1e-8)')
             self.args_parser.add_argument('--lr_curve', type=str, help='Learning reate curve ([[0.1, 80, 1]])')
             self.args_parser.add_argument('--momentum', type=float, help='Optimizer momentum (0.9)')
+            self.args_parser.add_argument('--alpha', type=float, help='Optimizer alpha (0.9)')
             self.args_parser.add_argument('--beta1', type=float, help='Optimizer beta1 (0.9)')
             self.args_parser.add_argument('--beta2', type=float, help='Optimizer beta2 (0.99)')
+            self.args_parser.add_argument('--opt_eps', type=float, help='Optimizer eps (1e-6)')
             self.args_parser.add_argument('--class_num', type=int, help='Number of classes (10/100/1000)')
             self.args_parser.add_argument('--class_min', type=int, help='Minimal index of the first class (0)')
             self.args_parser.add_argument('--validate_ep', type=int, help='Validate every [n] epochs, set 0 to disable')
@@ -113,24 +118,29 @@ class Config(object):
 
         # training configurations
         if self._app == 'train':
-            self._default_config[section]['data_dir'] = "_datasets/ILSVRC2012"
-            self._default_config[section]['data_type'] = "tfrecord"
+            self._default_config[section]['data_dir'] = "/datasets/imagenet"
+            self._default_config[section]['data_type'] = "folder"
             self._default_config[section]['idx_file'] = ""
             self._default_config[section]['batch_size'] = 32
-            self._default_config[section]['valid_size'] = 250
+            self._default_config[section]['valid_size'] = 32
+            self._default_config[section]['out_size'] = 224
+            self._default_config[section]['num_workers'] = 1
             self._default_config[section]['data_format'] = "NCHW"
-            self._default_config[section]['model_name'] = "resnet"
-            self._default_config[section]['model_type'] = "v2"
-            self._default_config[section]['block_type'] = "bottleneck"
-            self._default_config[section]['blocks'] = [3, 4, 6, 3]
-            self._default_config[section]['regularizer'] = "l2"
+            self._default_config[section]['model_name'] = ""
+            self._default_config[section]['model_type'] = ""
+            self._default_config[section]['block_type'] = ""
+            self._default_config[section]['blocks'] = []
+            self._default_config[section]['regularizer'] = ""
+            self._default_config[section]['pretrained'] = 0
             self._default_config[section]['optim'] = "Momentum"
             self._default_config[section]['lr_initial'] = 0.1
             self._default_config[section]['lr_minimal'] = 1e-8
             self._default_config[section]['lr_curve'] = [[0.1, 30, 3], [0.1, 20, 1]]
             self._default_config[section]['momentum'] = 0.9
+            self._default_config[section]['alpha'] = 0.9
             self._default_config[section]['beta1'] = 0.9
             self._default_config[section]['beta2'] = 0.99
+            self._default_config[section]['opt_eps'] = 1e-6
             self._default_config[section]['class_num'] = 1000
             self._default_config[section]['class_min'] = 0
             self._default_config[section]['validate_ep'] = 10
@@ -139,10 +149,9 @@ class Config(object):
             self._default_config[section]['valid_only'] = False
 
             # no command line argument
-            self._default_config[section]['save_interval'] = 600
+            self._default_config[section]['save_interval'] = 1
             self._default_config[section]['dataset'] = "default"
             self._default_config[section]['shuffle_size'] = 2048
-            self._default_config[section]['summary_freq'] = 2
             self._default_config[section]['deferred'] = False
         elif self._app == 'scraper':
             self._default_config[section]['data_dir'] = "_train/default"

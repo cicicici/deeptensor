@@ -8,7 +8,7 @@ DATE=$(date +%Y%m%d)
 
 #LAUNCH=../launch/launch_gpu_4.sh
 LAUNCH=../launch/launch_multi.sh
-APP=imagenet_b4.py
+APP=imagenet_conv.py
 TRACE=--trace
 
 #INI_PRE=imagenet_l2_k

@@ -45,9 +45,9 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
     def build_data(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build data".format(self.tag, type(self).__name__))
         args = self._ctx.args
-        data = dt.data.ImageNet(data_dir='/datasets/imagenet',
+        data = dt.data.ImageNet(data_dir=args.data_dir,
                                 batch_size=args.batch_size, valid_size=args.valid_size,
-                                out_size=224, num_workers=4, pin_memory=self.use_cuda)
+                                out_size=args.out_size, num_workers=args.num_workers, pin_memory=self.use_cuda)
         data.init_data()
         data.load_data()
         self._data = data
@@ -55,74 +55,105 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
 
     def build_model(self):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build model".format(self.tag, type(self).__name__))
+        args = self._ctx.args
+        pretrained = (args.pretrained > 0)
 
-        #if dt.train.is_chief():
-        #    dt.print_pp(torchvision.models.__dict__)
+        if args.model_name == 'efficientnet':
+            if args.model_type == 'b0':
+                self._model = dt.model.efficientnet.efficientnet_b0(pretrained=pretrained)
+            elif args.model_type == 'b1':
+                self._model = dt.model.efficientnet.efficientnet_b1(pretrained=pretrained)
+            elif args.model_type == 'b2':
+                self._model = dt.model.efficientnet.efficientnet_b2(pretrained=pretrained)
+            elif args.model_type == 'b3':
+                self._model = dt.model.efficientnet.efficientnet_b3(pretrained=pretrained)
+            elif args.model_type == 'b4':
+                self._model = dt.model.efficientnet.efficientnet_b4(pretrained=pretrained)
+            elif args.model_type == 'b5':
+                self._model = dt.model.efficientnet.efficientnet_b5(pretrained=pretrained)
+            elif args.model_type == 'b6':
+                self._model = dt.model.efficientnet.efficientnet_b6(pretrained=pretrained)
+            elif args.model_type == 'b7':
+                self._model = dt.model.efficientnet.efficientnet_b7(pretrained=pretrained)
+            else:
+                self._model = None
+        elif args.model_name == 'fairnas':
+            if args.model_type == 'a':
+                self._model = dt.model.imagenet.FairNasA()         # 8-gpu
+            elif args.model_type == 'b':
+                self._model = dt.model.imagenet.FairNasB()
+            elif args.model_type == 'c':
+                self._model = dt.model.imagenet.FairNasC()
+            else:
+                self._model = None
+        else:
+            #if dt.train.is_chief():
+            #    dt.print_pp(torchvision.models.__dict__)
+            #arch = 'alexnet'
+            #arch = 'densenet121'
+            #arch = 'densenet161'
+            #arch = 'densenet169'
+            #arch = 'densenet201'
+            #arch = 'googlenet'
+            #arch = 'inception_v3'
+            #arch = 'mnasnet0_5'
+            #arch = 'mnasnet0_75'
+            #arch = 'mnasnet1_0'
+            #arch = 'mnasnet1_3'
+            #arch = 'mobilenet_v2'
+            #arch = 'resnet18'
+            #arch = 'resnet34'
+            # arch = 'resnet50'
+            #arch = 'resnet101'
+            #arch = 'resnet152'
+            #arch = 'resnext50_32x4d'
+            #arch = 'resnext101_32x8d'
+            #arch = 'shufflenet_v2_x0_5'
+            #arch = 'shufflenet_v2_x1_0'
+            #arch = 'shufflenet_v2_x1_5'
+            #arch = 'shufflenet_v2_x2_0'
+            #arch = 'squeezenet1_0'
+            #arch = 'squeezenet1_1'
+            #arch = 'vgg11'
+            #arch = 'vgg11_bn'
+            #arch = 'vgg13'
+            #arch = 'vgg13_bn'
+            #arch = 'vgg16'
+            #arch = 'vgg16_bn'
+            #arch = 'vgg19'
+            #arch = 'vgg19_bn'
+            #arch = 'wide_resnet50_2'
+            #arch = 'wide_resnet101_2'
+            self._model = torchvision.models.__dict__[args.model_name](pretrained=pretrained)
 
-        #arch = 'alexnet'
-        #arch = 'densenet121'
-        #arch = 'densenet161'
-        #arch = 'densenet169'
-        #arch = 'densenet201'
-        #arch = 'googlenet'
-        #arch = 'inception_v3'
-        #arch = 'mnasnet0_5'
-        #arch = 'mnasnet0_75'
-        #arch = 'mnasnet1_0'
-        #arch = 'mnasnet1_3'
-        #arch = 'mobilenet_v2'
-        #arch = 'resnet18'
-        #arch = 'resnet34'
-        # arch = 'resnet50'
-        #arch = 'resnet101'
-        #arch = 'resnet152'
-        #arch = 'resnext50_32x4d'
-        #arch = 'resnext101_32x8d'
-        #arch = 'shufflenet_v2_x0_5'
-        #arch = 'shufflenet_v2_x1_0'
-        #arch = 'shufflenet_v2_x1_5'
-        #arch = 'shufflenet_v2_x2_0'
-        #arch = 'squeezenet1_0'
-        #arch = 'squeezenet1_1'
-        #arch = 'vgg11'
-        #arch = 'vgg11_bn'
-        #arch = 'vgg13'
-        #arch = 'vgg13_bn'
-        #arch = 'vgg16'
-        #arch = 'vgg16_bn'
-        #arch = 'vgg19'
-        #arch = 'vgg19_bn'
-        #arch = 'wide_resnet50_2'
-        #arch = 'wide_resnet101_2'
-
-        #pretrained = True
-        pretrained = False
-
-        #self._model = torchvision.models.__dict__[arch](pretrained=pretrained)
-        #dt.info(dt.DC.TRAIN, "arch {}, pretrained {}".format(arch, pretrained))
-
-        #self._model = dt.model.imagenet.FairNasA()         # 8-gpu
-
-        arch = 'efficientnet-b0'
-        self._model = dt.model.efficientnet.efficientnet_b0(pretrained=pretrained)
-        dt.info(dt.DC.TRAIN, "arch {}, pretrained {}".format(arch, pretrained))
+        dt.info(dt.DC.TRAIN, "model {}, type {}, pretrained {}".format(args.model_name, args.model_type, args.pretrained))
 
         return True
 
     def post_model(self):
+        args = self._ctx.args
         if dt.train.is_chief():
             dt.summary.summary_model_patch(self._model)
-            dt.info(dt.DC.TRAIN, "\n{}".format(dt.summary.summary_model_fwd(self._model, (3, 224, 224), device='cpu')))
+            dt.info(dt.DC.TRAIN, "\n{}".format(dt.summary.summary_model_fwd(self._model, (3, args.out_size, args.out_size), device='cpu')))
             dt.summary.summary_model_patch(self._model, patch_fn=dt.summary.patch_clear_dt)
 
     def build_optimizer(self):
-        #self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(),
-        #        momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
 
-        self._optimizer = dt.optimizer.RMSpropTF(self._model.parameters(), lr=dt.train.get_lr_val(),
-                alpha=0.9, eps=1e-3,
-                momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay,
-                centered=False, decoupled_decay=False, lr_in_momentum=True)
+        if self._ctx.optim == 'RMSpropRW':
+            self._optimizer = dt.optimizer.RMSpropRW(self._model.parameters(), lr=dt.train.get_lr_val(),
+                    alpha=self._ctx.alpha, eps=self._ctx.opt_eps,
+                    momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay,
+                    centered=False, decoupled_decay=False, lr_in_momentum=True)
+        if self._ctx.optim == 'RMSpropNA':
+            self._optimizer = dt.optimizer.RMSpropNA(self._model.parameters(), lr=dt.train.get_lr_val(),
+                    rho=self._ctx.alpha, eps=self._ctx.opt_eps,
+                    momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay,
+                    warmup=0)
+        elif self._ctx.optim == 'SDG':
+            self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(),
+                momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
+        else:
+            self._optimizer = None
 
         return True
 
