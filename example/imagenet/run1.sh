@@ -15,7 +15,7 @@ TRACE=--trace
 #INI_PRE=imagenet_l2_l
 #INI_PRE=imagenet_l2_m
 #INI_PRE=imagenet_l2_n
-INI_PRE=imagenet
+INI_PRE=imagenet_b0_1
 INI=config/$INI_PRE".ini"
 
 MAX_EP=450
