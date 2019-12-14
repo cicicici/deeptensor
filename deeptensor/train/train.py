@@ -160,9 +160,9 @@ def train(**kwargs):
     opt += dt.Opt(lr_initial=0.001, lr_minimal=1e-6, lr_curve=[['*', 0.1, 10, 1]])
 
     # Default training options
-    opt += dt.Opt(optim='SGD', alpha=0.9, beta1=0.9, beta2=0.99, momentum=0.9, weight_decay=5e-4, opt_eps=1e-6, category='',
+    opt += dt.Opt(optim='SGD', alpha=0.9, beta1=0.9, beta2=0.99, opt_eps=1e-6, momentum=0.9, weight_decay=5e-4,
                   model_dir='asset/train', random_seed=12345, max_ep=100000,
-                  save_interval=1, max_keep=5, validate_ep=0, data_format=dt.dformat.DEFAULT)
+                  save_interval=1, validate_ep=1, data_format=dt.dformat.DEFAULT)
 
     # Default horovod options
     opt += dt.Opt(fp16_allreduce=False)

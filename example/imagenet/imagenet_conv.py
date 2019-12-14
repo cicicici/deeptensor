@@ -164,7 +164,8 @@ with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
                    batch_size=ARGS.batch_size, valid_size=ARGS.valid_size,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
-                   beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
+                   alpha=ARGS.alpha, beta1=ARGS.beta1, beta2=ARGS.beta2, opt_eps=ARGS.opt_eps,
+                   momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
                    random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
 
 #dt.util.datalink_close()
