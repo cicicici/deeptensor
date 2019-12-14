@@ -144,7 +144,7 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
                     alpha=self._ctx.alpha, eps=self._ctx.opt_eps,
                     momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay,
                     centered=False, decoupled_decay=False, lr_in_momentum=True)
-        if self._ctx.optim == 'RMSpropNA':
+        elif self._ctx.optim == 'RMSpropNA':
             self._optimizer = dt.optimizer.RMSpropNA(self._model.parameters(), lr=dt.train.get_lr_val(),
                     rho=self._ctx.alpha, eps=self._ctx.opt_eps,
                     momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay,
