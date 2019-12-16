@@ -75,8 +75,6 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
                 self._model = dt.model.efficientnet.efficientnet_b6(pretrained=pretrained)
             elif args.model_type == 'b7':
                 self._model = dt.model.efficientnet.efficientnet_b7(pretrained=pretrained)
-            else:
-                self._model = None
         elif args.model_name == 'efficientnet_lm':
             if args.model_type == 'b0' or \
                args.model_type == 'b1' or \
@@ -91,17 +89,18 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
                     self._model = dt.model.efficientnet.EfficientNetLM.from_pretrained(model_arch)
                 else:
                     self._model = dt.model.efficientnet.EfficientNetLM.from_name(model_arch)
-            else:
-                self._model = None
         elif args.model_name == 'fairnas':
             if args.model_type == 'a':
-                self._model = dt.model.imagenet.FairNasA()         # 8-gpu
+                self._model = dt.model.fairnas.FairNasA()         # 8-gpu
             elif args.model_type == 'b':
-                self._model = dt.model.imagenet.FairNasB()
+                self._model = dt.model.fairnas.FairNasB()
             elif args.model_type == 'c':
-                self._model = dt.model.imagenet.FairNasC()
-            else:
-                self._model = None
+                self._model = dt.model.fairnas.FairNasC()
+        elif args.model_name == 'resnet_rw':
+            if args.model_type == '34':
+                self._model = dt.model.resnet.resnet34_rw()
+            elif args.model_type == '50':
+                self._model = dt.model.resnet.resnet50_rw()
         else:
             #if dt.train.is_chief():
             #    dt.print_pp(torchvision.models.__dict__)

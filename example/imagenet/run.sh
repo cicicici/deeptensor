@@ -11,17 +11,24 @@ LAUNCH=../launch/launch_multi.sh
 APP=imagenet_conv.py
 TRACE=--trace
 
-#INI_PRE=imagenet_l2_k
-#INI_PRE=imagenet_l2_l
-#INI_PRE=imagenet_l2_m
-#INI_PRE=imagenet_l2_n
-INI_PRE=imagenet
+INI_PRE=$1
+if [[ -z "$INI_PRE" || "$INI_PRE" == "-" ]]; then
+    echo "$0 <config prefix> [-n <name>]"
+    exit
+fi
 INI=config/$INI_PRE".ini"
+set -- "${@: 2: $#}"
+
+if [[ "$1" == "-n" ]]; then
+    MODEL_DIR_PRE=$INI_PRE"."$2
+    set -- "${@: 3: $#}"
+else
+    MODEL_DIR_PRE=$INI_PRE"."$DATE
+fi
+echo "Args: $@"
 
 MAX_EP=450
 VALID_EP=1
-
-MODEL_DIR_PRE=$INI_PRE"."$DATE
 
 echo "COMMIT: $COMMIT"
 echo "HOST: $HOST"
@@ -30,38 +37,15 @@ echo "APP: $APP"
 echo "INI: $INI"
 echo "ARGS: $@"
 
-for i in {1..8}
+for i in {1..4}
 do
 echo ">>>> Run $i:"
 
+echo $LAUNCH python $APP -c $INI --tag $COMMIT"."$HOST"_$i" --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir "$MODEL_DIR_PRE" $TRACE $@
 $LAUNCH python $APP -c $INI --tag $COMMIT"."$HOST"_$i" --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir "$MODEL_DIR_PRE" $TRACE $@
-#killall python
-sleep 15
+
+sleep 5
 
 echo "<<<<"
 done
-
-#$LAUNCH python $APP -c $INI --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir $MODEL_DIR_PRE"" --conv_decay 0.0001 --fc_decay 0.0001
-#killall python; sleep 15
-
-#$LAUNCH python $APP -c $INI --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir $MODEL_DIR_PRE".var_ne_val" --conv_decay 0.0001 --fc_decay 0.0001
-#killall python; sleep 15
-
-#$LAUNCH python $APP -c $INI --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir $MODEL_DIR_PRE".var" --conv_decay 0.0001 --fc_decay 0.0001
-#killall python; sleep 15
-
-#$LAUNCH python $APP -c $INI --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir $MODEL_DIR_PRE".match" --conv_decay 0.0001 --fc_decay 0.0001
-#killall python; sleep 15
-
-#$LAUNCH python $APP -c $INI --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir $MODEL_DIR_PRE".match_v1" --model_type v1 --shortcut conv --conv_decay 0.0001 --fc_decay 0.0001
-#killall python; sleep 15
-
-#$LAUNCH python $APP -c $INI --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir $MODEL_DIR_PRE".match_v1_nozero" --model_type v1 --shortcut conv --conv_decay 0.0001 --fc_decay 0.0001
-#killall python; sleep 15
-
-#$LAUNCH python $APP -c $INI --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir $MODEL_DIR_PRE".match_v2_nozero" --model_type v2 --shortcut conv --conv_decay 0.0001 --fc_decay 0.0001
-#killall python; sleep 15
-
-#$LAUNCH python $APP -c $INI --tag $COMMIT"."$HOST --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir $MODEL_DIR_PRE $@
-#killall python; sleep 15
 

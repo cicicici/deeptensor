@@ -152,7 +152,6 @@ class Config(object):
             self._default_config[section]['save_interval'] = 1
             self._default_config[section]['dataset'] = "default"
             self._default_config[section]['shuffle_size'] = 2048
-            self._default_config[section]['deferred'] = False
         elif self._app == 'scraper':
             self._default_config[section]['data_dir'] = "_train/default"
             self._default_config[section]['data_filter'] = ".+"
