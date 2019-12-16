@@ -1,5 +1,5 @@
 from .model import save, load
 
 from .cifar import cifar
-from .imagenet import imagenet
+from .fairnas import fairnas
 from .efficientnet import efficientnet
