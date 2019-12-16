@@ -77,6 +77,22 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
                 self._model = dt.model.efficientnet.efficientnet_b7(pretrained=pretrained)
             else:
                 self._model = None
+        elif args.model_name == 'efficientnet_lm':
+            if args.model_type == 'b0' or \
+               args.model_type == 'b1' or \
+               args.model_type == 'b2' or \
+               args.model_type == 'b3' or \
+               args.model_type == 'b4' or \
+               args.model_type == 'b5' or \
+               args.model_type == 'b6' or \
+               args.model_type == 'b7':
+                model_arch = "efficientnet-{}".format(args.model_type)
+                if pretrained:
+                    self._model = dt.model.efficientnet.EfficientNetLM.from_pretrained(model_arch)
+                else:
+                    self._model = dt.model.efficientnet.EfficientNetLM.from_name(model_arch)
+            else:
+                self._model = None
         elif args.model_name == 'fairnas':
             if args.model_type == 'a':
                 self._model = dt.model.imagenet.FairNasA()         # 8-gpu

@@ -3,7 +3,7 @@ import math
 import torch
 from torch import nn
 
-from .utils import load_state_dict_from_url
+from .utils_na import load_state_dict_from_url
 
 model_urls = {
     'efficientnet_b0': 'https://www.dropbox.com/s/9wigibun8n260qm/efficientnet-b0-4cfa50.pth?dl=1',
