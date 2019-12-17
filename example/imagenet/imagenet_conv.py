@@ -89,56 +89,30 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
                     self._model = dt.model.efficientnet.EfficientNetLM.from_pretrained(model_arch)
                 else:
                     self._model = dt.model.efficientnet.EfficientNetLM.from_name(model_arch)
+        elif args.model_name == 'efficientnet_rw':
+            if args.model_type == 'b0' or \
+               args.model_type == 'b1' or \
+               args.model_type == 'b2' or \
+               args.model_type == 'b3' or \
+               args.model_type == 'b4' or \
+               args.model_type == 'b5' or \
+               args.model_type == 'b6' or \
+               args.model_type == 'b7':
+                model_arch = "efficientnet_{}".format(args.model_type)
+                self._model = dt.model.timm.create_model(model_arch, pretrained=pretrained)
         elif args.model_name == 'fairnas':
             if args.model_type == 'a':
                 self._model = dt.model.fairnas.FairNasA()         # 8-gpu
-            elif args.model_type == 'b':
-                self._model = dt.model.fairnas.FairNasB()
-            elif args.model_type == 'c':
-                self._model = dt.model.fairnas.FairNasC()
         elif args.model_name == 'resnet_rw':
+            #if dt.train.is_chief():
+            #    dt.print_pp(dt.model.timm.list_models())
             if args.model_type == '34':
-                self._model = dt.model.resnet.resnet34_rw()
+                self._model = dt.model.timm.create_model('resnet34', pretrained=pretrained)
             elif args.model_type == '50':
-                self._model = dt.model.resnet.resnet50_rw()
+                self._model = dt.model.timm.create_model('resnet50', pretrained=pretrained)
         else:
             #if dt.train.is_chief():
             #    dt.print_pp(torchvision.models.__dict__)
-            #arch = 'alexnet'
-            #arch = 'densenet121'
-            #arch = 'densenet161'
-            #arch = 'densenet169'
-            #arch = 'densenet201'
-            #arch = 'googlenet'
-            #arch = 'inception_v3'
-            #arch = 'mnasnet0_5'
-            #arch = 'mnasnet0_75'
-            #arch = 'mnasnet1_0'
-            #arch = 'mnasnet1_3'
-            #arch = 'mobilenet_v2'
-            #arch = 'resnet18'
-            #arch = 'resnet34'
-            # arch = 'resnet50'
-            #arch = 'resnet101'
-            #arch = 'resnet152'
-            #arch = 'resnext50_32x4d'
-            #arch = 'resnext101_32x8d'
-            #arch = 'shufflenet_v2_x0_5'
-            #arch = 'shufflenet_v2_x1_0'
-            #arch = 'shufflenet_v2_x1_5'
-            #arch = 'shufflenet_v2_x2_0'
-            #arch = 'squeezenet1_0'
-            #arch = 'squeezenet1_1'
-            #arch = 'vgg11'
-            #arch = 'vgg11_bn'
-            #arch = 'vgg13'
-            #arch = 'vgg13_bn'
-            #arch = 'vgg16'
-            #arch = 'vgg16_bn'
-            #arch = 'vgg19'
-            #arch = 'vgg19_bn'
-            #arch = 'wide_resnet50_2'
-            #arch = 'wide_resnet101_2'
             self._model = torchvision.models.__dict__[args.model_name](pretrained=pretrained)
 
         dt.info(dt.DC.TRAIN, "model {}, type {}, pretrained {}".format(args.model_name, args.model_type, args.pretrained))
