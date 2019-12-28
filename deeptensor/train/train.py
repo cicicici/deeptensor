@@ -12,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import horovod.torch as hvd
 
+import random
 import numpy as np
 import time
 
@@ -27,6 +28,7 @@ def init_library():
     # Horovod: initialize library.
     hvd.init()
     torch.backends.cudnn.benchmark = True
+    #torch.backends.cudnn.deterministic = True
 
 def init_device(opt):
     global _use_cuda
@@ -146,6 +148,14 @@ def dump_learning_rate(optimizer):
     for param_group in optimizer.param_groups:
         print(param_group['lr'])
 
+def set_random_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if use_cuda():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
 def train(**kwargs):
 
     opt = dt.Opt(kwargs) + dt.get_ctx()
@@ -161,7 +171,7 @@ def train(**kwargs):
 
     # Default training options
     opt += dt.Opt(optim='SGD', alpha=0.9, beta1=0.9, beta2=0.99, opt_eps=1e-6, momentum=0.9, weight_decay=5e-4,
-                  model_dir='asset/train', random_seed=12345, max_ep=100000,
+                  model_dir='asset/train', random_seed=0, max_ep=100000,
                   save_interval=1, validate_ep=1, data_format=dt.dformat.DEFAULT)
 
     # Default horovod options
@@ -179,8 +189,8 @@ def train(**kwargs):
     init_device(opt)
     dt.info(dt.DC.TRAIN, '[HOROVOD] rank {}/{}, local {}'
                              .format(hvd.rank(), hvd.size(), hvd.local_rank()))
-    dt.info(dt.DC.TRAIN, '[DEVICE] use_cuda {}, device {}, gpu {}/{}'
-                             .format(use_cuda(), device(), device_index(), device_count()))
+    dt.info(dt.DC.TRAIN, '[DEVICE] use_cuda {}, device {}, gpu {}/{}, random_seed {}'
+                             .format(use_cuda(), device(), device_index(), device_count(), opt.random_seed))
 
     # Initialize training variables
     init_global_step(opt)
@@ -192,7 +202,9 @@ def train(**kwargs):
         dt.info(dt.DC.TRAIN, '[TRAIN] opt')
         dt.print_pp(dt.opt_to_dict(opt))
 
-    torch.manual_seed(opt.random_seed)
+    if opt.random_seed != 0:
+        set_random_seed(opt.random_seed)
+
     if use_cuda():
         # Horovod: pin GPU to local rank.
         torch.cuda.set_device(device_index())
