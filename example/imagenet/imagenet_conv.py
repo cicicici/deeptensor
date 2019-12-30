@@ -1,6 +1,8 @@
 #! /usr/bin/python
 # -*- coding: utf8 -*-
 
+import warnings
+
 import deeptensor as dt
 import torch
 import torch.nn as nn
@@ -9,7 +11,6 @@ import torch.optim as optim
 import torchvision
 import horovod.torch as hvd
 
-import warnings
 
 warnings.filterwarnings("ignore", "Corrupt EXIF data", UserWarning)
 
@@ -155,6 +156,6 @@ with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    alpha=ARGS.alpha, beta1=ARGS.beta1, beta2=ARGS.beta2, opt_eps=ARGS.opt_eps,
                    momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
-                   random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
+                   random_seed=dt.util.random_int(1, 999999), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
 
 #dt.util.datalink_close()

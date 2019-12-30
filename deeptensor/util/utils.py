@@ -6,6 +6,8 @@ import os
 import sys
 import random
 
+sys_rnd = random.SystemRandom()
+
 def token_in_list(line_list, token):
     in_list = False
 
@@ -43,3 +45,6 @@ def split_list(line_list, parts, rand=False):
             splits[i%parts].append(line)
 
     return splits
+
+def random_int(a, b):
+    return sys_rnd.randint(a, b)

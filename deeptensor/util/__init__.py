@@ -1,5 +1,5 @@
 from .opt import opt_to_dict, dict_to_opt, opt_to_file, opt_from_file, Opt
-from .utils import token_in_list, list_in_token, split_list
+from .utils import token_in_list, list_in_token, split_list, random_int
 from .datalink import DataPacket, DataLink, datalink_start, datalink_close, \
                       datalink, datalink_register_recv, datalink_send_opt
 from .callback import Callback, CallGroup
