@@ -19,8 +19,10 @@ class ImageNet(BaseData):
 
     NUM_CHANNELS = 3
     IMAGE_SIZE = 224
-    CROP_RATIO = 0.875
     NUM_CLASSES = 1000
+
+    CROP_RATIO = 0.875
+    CROP_PAD = 32
 
     TRAIN_NUM_PER_EPOCH = 1281167
     VALID_NUM_PER_EPOCH = 50000
@@ -83,12 +85,17 @@ class ImageNet(BaseData):
         transform_train = transforms.Compose([
             transforms.RandomResizedCrop(self._out_size, interpolation=PIL.Image.BICUBIC),
             transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(
+                brightness=0.4,
+                contrast=0.4,
+                saturation=0.4,
+            ),
             transforms.ToTensor(),
             transforms.Normalize(mean=ImageNet.MEAN_RGB, std=ImageNet.VAR_RGB),
         ])
 
         transform_test = transforms.Compose([
-            transforms.Resize(self._out_size + 32, interpolation=PIL.Image.BICUBIC),
+            transforms.Resize(self._out_size + ImageNet.CROP_PAD, interpolation=PIL.Image.BICUBIC),
             transforms.CenterCrop(self._out_size),
             transforms.ToTensor(),
             transforms.Normalize(mean=ImageNet.MEAN_RGB, std=ImageNet.VAR_RGB),
