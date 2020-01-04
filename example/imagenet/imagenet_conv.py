@@ -1,8 +1,6 @@
 #! /usr/bin/python
 # -*- coding: utf8 -*-
 
-import warnings
-
 import deeptensor as dt
 import torch
 import torch.nn as nn
@@ -10,9 +8,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 import horovod.torch as hvd
-
-
-warnings.filterwarnings("ignore", "Corrupt EXIF data", UserWarning)
 
 # Init horovod
 dt.train.init_library()
@@ -38,8 +33,8 @@ ARGS = cfg.opt().args
 #    dt.util.datalink_register_recv(datalink_recv)
 
 class ImageNetEstimator(dt.estimator.ClassEstimator):
-    def __init__(self, opt, cfg):
-        super(ImageNetEstimator, self).__init__(opt, cfg)
+    def __init__(self, ctx):
+        super(ImageNetEstimator, self).__init__(ctx)
         self.tag = "EST::IMAGENET"
         dt.trace(dt.DC.MODEL, "[{}] ({}) __init__".format(self.tag, type(self).__name__))
 
@@ -130,17 +125,17 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
     def build_optimizer(self):
 
         if self._ctx.optim == 'RMSpropRW':
-            self._optimizer = dt.optimizer.RMSpropRW(self._model.parameters(), lr=dt.train.get_lr_val(),
+            self._optimizer = dt.optimizer.RMSpropRW(self._model.parameters(), lr=self.trainer.get_lr_val(),
                     alpha=self._ctx.alpha, eps=self._ctx.opt_eps,
                     momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay,
                     centered=False, decoupled_decay=False, lr_in_momentum=True)
         elif self._ctx.optim == 'RMSpropNA':
-            self._optimizer = dt.optimizer.RMSpropNA(self._model.parameters(), lr=dt.train.get_lr_val(),
+            self._optimizer = dt.optimizer.RMSpropNA(self._model.parameters(), lr=self.trainer.get_lr_val(),
                     rho=self._ctx.alpha, eps=self._ctx.opt_eps,
                     momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay,
                     warmup=0)
         elif self._ctx.optim == 'SDG':
-            self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(),
+            self._optimizer = optim.SGD(self._model.parameters(), lr=self.trainer.get_lr_val(),
                 momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
         else:
             self._optimizer = None
@@ -148,14 +143,26 @@ class ImageNetEstimator(dt.estimator.ClassEstimator):
         return True
 
 # Train
-with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
-            lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve):
-    dt.train.train(args=ARGS, est_class=ImageNetEstimator, est_cfg=dt.Opt(),
-                   batch_size=ARGS.batch_size, valid_size=ARGS.valid_size,
-                   validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
-                   model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
-                   alpha=ARGS.alpha, beta1=ARGS.beta1, beta2=ARGS.beta2, opt_eps=ARGS.opt_eps,
-                   momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
-                   random_seed=dt.util.random_int(1, 999999), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
+ctx = dt.Opt(args=ARGS,
+             optim=ARGS.optim, data_format=ARGS.data_format,
+             lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve,
+             batch_size=ARGS.batch_size, valid_size=ARGS.valid_size,
+             validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
+             model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
+             alpha=ARGS.alpha, beta1=ARGS.beta1, beta2=ARGS.beta2, opt_eps=ARGS.opt_eps,
+             momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
+             random_seed=dt.util.random_int(1, 999999), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
+
+est = ImageNetEstimator(ctx)
+est.build_flow()
+
+trainer = dt.train.Trainer(ctx).init()
+
+trainer.bind_estimator(est)
+
+trainer.train_setup()
+trainer.train_begin()
+trainer.train()
+trainer.train_end()
 
 #dt.util.datalink_close()

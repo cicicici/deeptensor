@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 import math
 import PIL
+import warnings
 
 import deeptensor as dt
 
@@ -14,6 +15,8 @@ import horovod.torch as hvd
 
 from deeptensor.data import BaseData
 
+
+warnings.filterwarnings("ignore", "Corrupt EXIF data", UserWarning)
 
 class ImageNet(BaseData):
 

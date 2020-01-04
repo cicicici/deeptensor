@@ -230,6 +230,8 @@ class Trainer(object):
         # Horovod: limit # of CPU threads to be used per worker.
         torch.set_num_threads(1)
 
+        return self
+
     def bind_estimator(self, est):
 
         # Estimiator
@@ -316,7 +318,7 @@ class Trainer(object):
         valid_loader = est.data.valid.loader
 
         if max_ep is None:
-            max_ep = 1
+            max_ep = ctx.max_ep
 
         for epoch in range(self._epoch, min(self._epoch + max_ep, ctx.max_ep)):
             dryrun = (epoch <= ctx.epoch_done)

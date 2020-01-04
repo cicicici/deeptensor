@@ -83,14 +83,13 @@ ctx = dt.Opt(args=ARGS,
 est = Cifar10Estimator(ctx)
 est.build_flow()
 
-trainer = dt.train.Trainer(ctx)
-trainer.init()
+trainer = dt.train.Trainer(ctx).init()
 
 trainer.bind_estimator(est)
 
 trainer.train_setup()
 trainer.train_begin()
-trainer.train(max_ep = 2)
+trainer.train()
 trainer.train_end()
 
 #dt.util.datalink_close()
