@@ -13,11 +13,11 @@ import horovod.torch as hvd
 class BaseEstimator(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, opt, cfg):
+    def __init__(self, ctx):
         self.tag = "EST::BASE"
         dt.trace(dt.DC.MODEL, "[{}] ({}) __init__".format(self.tag, type(self).__name__))
-        self._ctx = opt
-        self._cfg = cfg
+        self._ctx = ctx
+        self._trainer = None
 
         self._data = None
         self._model = None
@@ -25,9 +25,6 @@ class BaseEstimator(object):
         self._optimizer = None
         self._train_hooks = []
         self._valid_hooks = []
-
-        self._use_cuda = dt.train.use_cuda()
-        self._device = dt.train.device()
 
     @property
     def tag(self):
@@ -38,12 +35,16 @@ class BaseEstimator(object):
         self._tag = value
 
     @property
-    def use_cuda(self):
-        return self._use_cuda
+    def ctx(self):
+        return self._ctx
 
     @property
-    def device(self):
-        return self._device
+    def trainer(self):
+        return self._trainer
+
+    @property
+    def use_cuda(self):
+        return self._trainer.use_cuda
 
     @property
     def data(self):
@@ -130,6 +131,9 @@ class BaseEstimator(object):
         pass
 
     # Core
+    def bind_trainer(self, trainer):
+        self._trainer = trainer
+
     def build_estimator(self):
         self.build_data()
         self.build_model()

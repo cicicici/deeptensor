@@ -13,8 +13,8 @@ from deeptensor.estimator import BaseEstimator
 
 class ClassEstimator(BaseEstimator):
 
-    def __init__(self, opt, cfg):
-        super(ClassEstimator, self).__init__(opt, cfg)
+    def __init__(self, ctx):
+        super(ClassEstimator, self).__init__(ctx)
         self.tag = "EST::CLASS"
         dt.trace(dt.DC.MODEL, "[{}] ({}) __init__".format(self.tag, type(self).__name__))
 
@@ -57,7 +57,7 @@ class ClassEstimator(BaseEstimator):
         return True
 
     def build_optimizer(self):
-        self._optimizer = optim.SGD(self._model.parameters(), lr=dt.train.get_lr_val(), momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
+        self._optimizer = optim.SGD(self._model.parameters(), lr=self.trainer.get_lr_val(), momentum=self._ctx.momentum, weight_decay=self._ctx.weight_decay)
         return True
 
     def build_hooks(self):
@@ -91,7 +91,7 @@ class ClassEstimator(BaseEstimator):
                     dt.Opt(name='top5', tensor=acc[1])]
 
     def pre_train(self):
-        dt.info(dt.DC.TRAIN, 'pre train [{}] device: {}'.format(self.tag, self._device))
+        dt.info(dt.DC.TRAIN, 'pre train [{}] device: {}'.format(self.tag, self.trainer.device))
         return None
 
     def post_train(self):

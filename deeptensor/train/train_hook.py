@@ -14,8 +14,11 @@ import copy
 
 class TrainHook(dt.util.Callback):
 
-    def __init__(self, ctx, **kwargs):
+    def __init__(self, ctx, trainer, **kwargs):
         super(TrainHook, self).__init__(ctx, **kwargs)
+
+        self._trainer = trainer
+
         self._every_n_steps = self._ctx.every_n_steps
 
     def begin(self, **kwargs):
@@ -196,7 +199,7 @@ class ValidProgressHook(TrainHook):
         if dt.train.is_chief():
             dt.info(dt.DC.TRAIN, '%s Epoch[%03d:lr=%.6f:gs=%06d] train (loss %s, %s %s), valid (loss %s, %s %s, %s %s), %.3f img/s' %
                                      (time.strftime("%H:%M:%S", time.gmtime(now_time - self._train_start)),
-                                     (epoch+1), dt.train.get_lr_val(), step,
+                                     (epoch+1), self._trainer.get_lr_val(), step,
                                      "{:.6f}".format(train_avg_loss), self._ctx.stats.train_metric_name, "{:.6f}".format(train_metric),
                                      "{:.6f}".format(self._ctx.stats.valid_loss),
                                      self._metric_name[0], "{:.6f}".format(self._metric_total[0].item()),
@@ -207,8 +210,8 @@ class ValidProgressHook(TrainHook):
 
 class LearningRateHook(TrainHook):
 
-    def __init__(self, ctx, **kwargs):
-        super(LearningRateHook, self).__init__(ctx, **kwargs)
+    def __init__(self, ctx, trainer, **kwargs):
+        super(LearningRateHook, self).__init__(ctx, trainer, **kwargs)
 
         self._lr_val = kwargs['lr_val']
         self._lr_minimal = kwargs['lr_minimal']
@@ -251,8 +254,8 @@ class LearningRateHook(TrainHook):
                 if self._lr_val < self._lr_minimal:
                     self._lr_val = self._lr_minimal
 
-                dt.train.set_lr_val(self._lr_val)
-                dt.train.update_learning_rate(self._optimizer)
+                self._trainer.set_lr_val(self._lr_val)
+                self._trainer.update_learning_rate(self._optimizer)
 
                 if self._lr_curve[0][3] > 0:
                     self._lr_curve[0][3] -= 1

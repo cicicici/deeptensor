@@ -8,7 +8,7 @@ import deeptensor as dt
 class Callback(object):
 
     def __init__(self, ctx, **kwargs):
-        self._ctx = ctx + dt.Opt(kwargs)
+        self._ctx = dt.Opt(kwargs) + ctx
 
     @property
     def idx(self):
@@ -34,7 +34,7 @@ class Callback(object):
 class CallGroup(object):
 
     def __init__(self, ctx, **kwargs):
-        self._ctx = ctx + dt.Opt(kwargs)
+        self._ctx = dt.Opt(kwargs) + ctx
         self._callbacks = []
 
     def add(self, callback):

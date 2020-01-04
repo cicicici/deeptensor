@@ -31,8 +31,8 @@ ARGS = cfg.opt().args
 #    dt.util.datalink_register_recv(datalink_recv)
 
 class Cifar10Estimator(dt.estimator.ClassEstimator):
-    def __init__(self, opt, cfg):
-        super(Cifar10Estimator, self).__init__(opt, cfg)
+    def __init__(self, ctx):
+        super(Cifar10Estimator, self).__init__(ctx)
         self.tag = "EST::CIFAR10"
         dt.trace(dt.DC.MODEL, "[{}] ({}) __init__".format(self.tag, type(self).__name__))
 
@@ -51,10 +51,10 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
         dt.trace(dt.DC.MODEL, "[{}] ({}) build model".format(self.tag, type(self).__name__))
 
         #self._model = dt.model.cifar.VGG('VGG19')        # target 92.64%
-        #self._model = dt.model.cifar.ResNet18()          # target 93.02%
+        self._model = dt.model.cifar.ResNet18()          # target 93.02%
         #self._model = dt.model.cifar.ResNet50()          # target 93.62%
         #self._model = dt.model.cifar.ResNet101()         # target 93.75%
-        self._model = dt.model.cifar.ResNet152()         # 8-gpu  94.2+%
+        #self._model = dt.model.cifar.ResNet152()         # 8-gpu  94.2+%
         #self._model = dt.model.cifar.PreActResNet18()    # target 95.11%, NAN
         #self._model = dt.model.cifar.GoogLeNet()
         #self._model = dt.model.cifar.DenseNet121()       # target 95.04%
@@ -73,11 +73,14 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
 # Train
 with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
             lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve):
-    dt.train.train(args=ARGS, est_class=Cifar10Estimator, est_cfg=dt.Opt(),
+    trainer = dt.train.Trainer(args=ARGS,
                    batch_size=ARGS.batch_size, valid_size=ARGS.valid_size,
                    validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
                    model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
                    beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
                    random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
+trainer.init()
+trainer.bind_estimator(Cifar10Estimator)
+trainer.train()
 
 #dt.util.datalink_close()
