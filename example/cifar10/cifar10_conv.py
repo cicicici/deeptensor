@@ -71,16 +71,26 @@ class Cifar10Estimator(dt.estimator.ClassEstimator):
         return True
 
 # Train
-with dt.ctx(optim=ARGS.optim, data_format=ARGS.data_format,
-            lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve):
-    trainer = dt.train.Trainer(args=ARGS,
-                   batch_size=ARGS.batch_size, valid_size=ARGS.valid_size,
-                   validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
-                   model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
-                   beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
-                   random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
+ctx = dt.Opt(args=ARGS,
+             optim=ARGS.optim, data_format=ARGS.data_format,
+             lr_initial=ARGS.lr_initial, lr_minimal=ARGS.lr_minimal, lr_curve=ARGS.lr_curve,
+             batch_size=ARGS.batch_size, valid_size=ARGS.valid_size,
+             validate_ep=ARGS.validate_ep, max_ep=ARGS.max_ep,
+             model_dir=ARGS.model_dir, save_interval=ARGS.save_interval,
+             beta1=ARGS.beta1, beta2=ARGS.beta2, momentum=ARGS.momentum, weight_decay=ARGS.weight_decay,
+             random_seed=1 * (hvd.rank()+1), gpu0=ARGS.gpu0, valid_only=ARGS.valid_only)
+
+est = Cifar10Estimator(ctx)
+est.build_flow()
+
+trainer = dt.train.Trainer(ctx)
 trainer.init()
-trainer.bind_estimator(Cifar10Estimator)
-trainer.train()
+
+trainer.bind_estimator(est)
+
+trainer.train_setup()
+trainer.train_begin()
+trainer.train(max_ep = 2)
+trainer.train_end()
 
 #dt.util.datalink_close()

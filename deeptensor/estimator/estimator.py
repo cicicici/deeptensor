@@ -44,7 +44,9 @@ class BaseEstimator(object):
 
     @property
     def use_cuda(self):
-        return self._trainer.use_cuda
+        if self._trainer:
+            return self._trainer.use_cuda
+        return True
 
     @property
     def data(self):
@@ -134,11 +136,14 @@ class BaseEstimator(object):
     def bind_trainer(self, trainer):
         self._trainer = trainer
 
-    def build_estimator(self):
+    def build_flow(self):
         self.build_data()
         self.build_model()
         self.post_model()
         self.build_criterion()
+        return self
+
+    def build_train(self):
         self.build_optimizer()
         self.build_hooks()
         return self

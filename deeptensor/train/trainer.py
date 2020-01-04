@@ -74,8 +74,8 @@ def dump_learning_rate(optimizer):
 
 class Trainer(object):
 
-    def __init__(self, **kwargs):
-        self._ctx = dt.Opt(kwargs) + dt.get_ctx()
+    def __init__(self, ctx, **kwargs):
+        self._ctx = dt.Opt(kwargs) + dt.get_ctx() + ctx
 
         self._use_cuda = False
         self._device = torch.device('cpu')
@@ -230,12 +230,12 @@ class Trainer(object):
         # Horovod: limit # of CPU threads to be used per worker.
         torch.set_num_threads(1)
 
-    def bind_estimator(self, est_class):
+    def bind_estimator(self, est):
 
         # Estimiator
-        est = est_class(self._ctx)
+        self._est = est
         est.bind_trainer(self)
-        est.build_estimator()
+        est.build_train()
 
         # Load checkpoint
         sync_params = {'epoch_done': self._ctx.epoch_done, 'global_step': self.global_step}
@@ -250,7 +250,7 @@ class Trainer(object):
         sync_params = mp_broadcast(sync_params)
         self._ctx.epoch_done = int(sync_params['epoch_done'])
         self.set_global_step(int(sync_params['global_step']))
-        mono_step_inc(self.global_step)
+        set_mono_step(self.global_step)
         dt.trace(dt.DC.TRAIN, '[CHECKPOINT] epoch_done {}, global_step {}, mono_step {}'.format(
             self._ctx.epoch_done, self.global_step, mono_step()))
 
@@ -272,16 +272,10 @@ class Trainer(object):
         est.optimizer = hvd.DistributedOptimizer(est.optimizer,
                                                  named_parameters=est.model.named_parameters(),
                                                  compression=compression)
-        self._est = est
 
-    def train(self):
-
+    def train_setup(self):
         ctx = self._ctx
         est = self._est
-
-        # Local variables
-        train_loader = est.data.train.loader
-        valid_loader = est.data.valid.loader
 
         # Hooks
         train_hooks = dt.train.TrainCallGroup(ctx)
@@ -296,15 +290,35 @@ class Trainer(object):
             valid_hooks.add(hook)
         valid_hooks.add(dt.train.ValidProgressHook(ctx, self, every_n_steps=1))
 
+        self._train_hooks = train_hooks
+        self._valid_hooks = valid_hooks
+
+    def train_begin(self):
+        ctx = self._ctx
+        est = self._est
+
         # Training
         est.pre_train()
 
-        train_start = time.time()
+        self._train_start = time.time()
         if not ctx.valid_only:
-            train_hooks.begin(train_start=train_start)
-        valid_hooks.begin(train_start=train_start)
+            self._train_hooks.begin(train_start=self._train_start)
+        self._valid_hooks.begin(train_start=self._train_start)
 
-        for epoch in range(0, ctx.max_ep):
+        self._epoch = 0
+
+    def train(self, max_ep=None):
+        ctx = self._ctx
+        est = self._est
+
+        # Local variables
+        train_loader = est.data.train.loader
+        valid_loader = est.data.valid.loader
+
+        if max_ep is None:
+            max_ep = 1
+
+        for epoch in range(self._epoch, min(self._epoch + max_ep, ctx.max_ep)):
             dryrun = (epoch <= ctx.epoch_done)
 
             # Train
@@ -316,10 +330,10 @@ class Trainer(object):
                     # Horovod: set epoch to sampler for shuffling.
                     est.data.train.sampler.set_epoch(epoch)
 
-                train_hooks.pre_epoch(step=self.global_step, epoch=epoch,
-                                      epoch_size=est.data.train.num_batch,
-                                      batch_size=est.data.train.batch_size,
-                                      dryrun=dryrun)
+                self._train_hooks.pre_epoch(step=self.global_step, epoch=epoch,
+                                            epoch_size=est.data.train.num_batch,
+                                            batch_size=est.data.train.batch_size,
+                                            dryrun=dryrun)
 
                 dt.vis.add_scalar('train/epoch', epoch+1)
                 dt.vis.add_scalar('train/lr', self.get_lr_val())
@@ -332,10 +346,10 @@ class Trainer(object):
                         images, labels = next(train_it)
                         size = len(images)
 
-                    train_hooks.pre_step(step=self.global_step, epoch=epoch,
-                                         index=index, size=size,
-                                         images=images, labels=labels,
-                                         dryrun=dryrun)
+                    self._train_hooks.pre_step(step=self.global_step, epoch=epoch,
+                                               index=index, size=size,
+                                               images=images, labels=labels,
+                                               dryrun=dryrun)
 
                     if not dryrun:
                         if self.use_cuda:
@@ -361,17 +375,19 @@ class Trainer(object):
                         loss = None
                         metric = None
 
-                    train_hooks.post_step(step=self.global_step, epoch=epoch,
-                                          index=index, size=size,
-                                          images=images, labels=labels,
-                                          logits=logits, loss=loss, metric=metric,
-                                          dryrun=dryrun)
+                    self._train_hooks.post_step(step=self.global_step, epoch=epoch,
+                                                index=index, size=size,
+                                                images=images, labels=labels,
+                                                logits=logits, loss=loss, metric=metric,
+                                                dryrun=dryrun)
 
                     if not dryrun:
                         self.global_step_inc()
 
-                train_hooks.post_epoch(step=self.global_step, epoch=epoch,
-                                       dryrun=dryrun)
+                self._train_hooks.post_epoch(step=self.global_step, epoch=epoch,
+                                             dryrun=dryrun)
+
+            self._epoch += 1
 
             # Skip validation for previous done epochs
             if dryrun:
@@ -384,15 +400,15 @@ class Trainer(object):
                 ctx.is_training = False
                 ctx.is_eval = True
 
-                valid_hooks.pre_epoch(step=self.global_step, epoch=epoch,
-                                      epoch_size=est.data.valid.num_batch,
-                                      batch_size=est.data.valid.batch_size)
+                self._valid_hooks.pre_epoch(step=self.global_step, epoch=epoch,
+                                            epoch_size=est.data.valid.num_batch,
+                                            batch_size=est.data.valid.batch_size)
 
                 with torch.no_grad():
                     for index, (images, labels) in enumerate(valid_loader):
                         size = len(images)
-                        valid_hooks.pre_step(step=self.global_step, epoch=epoch,
-                                             index=index, size=size)
+                        self._valid_hooks.pre_step(step=self.global_step, epoch=epoch,
+                                                   index=index, size=size)
 
                         if self.use_cuda:
                             images, labels = images.cuda(), labels.cuda()
@@ -403,12 +419,12 @@ class Trainer(object):
 
                         metric = est.metric(logits, labels, ctx.is_training)
 
-                        valid_hooks.post_step(step=self.global_step, epoch=epoch,
-                                              index=index, size=size,
-                                              images=images, labels=labels,
-                                              logits=logits, loss=loss, metric=metric)
+                        self._valid_hooks.post_step(step=self.global_step, epoch=epoch,
+                                                    index=index, size=size,
+                                                    images=images, labels=labels,
+                                                    logits=logits, loss=loss, metric=metric)
 
-                valid_hooks.post_epoch(step=self.global_step, epoch=epoch)
+                self._valid_hooks.post_epoch(step=self.global_step, epoch=epoch)
 
             if ctx.valid_only:
                 # Only need 1 epoch for valid
@@ -444,10 +460,14 @@ class Trainer(object):
             # End of epoch
             self._summary_writer.flush()
 
-        train_end = time.time()
+    def train_end(self):
+        ctx = self._ctx
+        est = self._est
+
+        self._train_end = time.time()
         if not ctx.valid_only:
-            train_hooks.end(train_end=train_end)
-        valid_hooks.end(train_end=train_end)
+            self._train_hooks.end(train_end=self._train_end)
+        self._valid_hooks.end(train_end=self._train_end)
         est.post_train()
 
         # Save model

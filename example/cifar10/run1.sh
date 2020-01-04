@@ -32,7 +32,7 @@ do
 
     $LAUNCH python $APP -c $INI --tag $COMMIT"."$HOST"_$i" --max_ep $MAX_EP --validate_ep $VALID_EP --model_dir "$MODEL_DIR_PRE" $TRACE $@
     #killall python
-    sleep 15
+    #sleep 15
 
    echo "<<<<"
 done
